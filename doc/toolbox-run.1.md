@@ -35,6 +35,11 @@ host OS.
 Run command inside a toolbox container for a different operating system
 RELEASE than the host.
 
+**--notty** **-n**
+
+Run command inside a toolbox container but do not allocate a tty. This
+is mostly useful for running commands from dmenu, rofi and so on.
+
 ## EXAMPLES
 
 ### Run ls inside a toolbox container using the default image matching the host OS

@@ -34,6 +34,7 @@ var (
 	runFlags struct {
 		useDefaultContainer bool
 		releaseVersion      string
+		notty               bool
 		emitEscapeSequence  bool
 		fallbackToBash      bool
 		promptForCreate     bool
@@ -58,6 +59,7 @@ func init() {
 
 	flags.BoolVarP(&runFlags.useDefaultContainer, "default", "d", false, "Run command inside the system default container (eg. on Fedora 31 -> fedora-toolbox-31)")
 	flags.StringVarP(&runFlags.releaseVersion, "release", "r", "", "Run command inside a toolbox container with the release version")
+	flags.BoolVarP(&runFlags.notty, "notty", "n", false, "Run command inside a toolbox container but do not allocate a tty")
 	flags.BoolVar(&runFlags.emitEscapeSequence, "escape-sequence", false, "Emit an escape sequence for terminals")
 	flags.BoolVar(&runFlags.fallbackToBash, "fallback-to-bash", false, "If requested program does not exist, fallback to bash")
 	flags.BoolVar(&runFlags.promptForCreate, "prompt-for-create", true, "Offer to create a container if it does not exist")
@@ -238,10 +240,12 @@ func run(args []string) error {
 	logrus.Infof("Running in container '%s': %v", containerName, commands)
 
 	args = []string{"exec",
-		"--interactive",
-		"--tty",
 		"--user", viper.GetString("USER"),
 		"--workdir", viper.GetString("PWD")}
+
+	if !runFlags.notty {
+		args = append(args, "--interactive", "--tty")
+	}
 
 	// Add the environment variables that hold a value
 	for _, env := range preservedEnvVars {
