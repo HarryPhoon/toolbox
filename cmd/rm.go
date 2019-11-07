@@ -16,8 +16,10 @@ limitations under the License.
 package cmd
 
 import (
-	"fmt"
+	"encoding/json"
 
+	"github.com/containers/toolbox/utils"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -29,10 +31,10 @@ var (
 )
 
 var rmCmd = &cobra.Command{
-	Use:   "rm",
+	Use:   "rm [CONTAINER...]",
 	Short: "Remove one or more toolbox containers",
 	Run: func(cmd *cobra.Command, args []string) {
-		rm()
+		rm(args)
 	},
 }
 
@@ -44,6 +46,87 @@ func init() {
 	flags.BoolVarP(&rmFlags.forceDelete, "force", "f", false, "Force the removal of running and paused toolbox containers")
 }
 
-func rm() {
-	fmt.Println("function 'rm'")
+func rm(args []string) {
+	if rmFlags.deleteAll {
+		args := []string{"ps", "--all", "--sort", "names", "--filter", "label=com.github.debarshiray.toolbox=true", "--format", "json"}
+		output, err := utils.PodmanOutput(args...)
+		if err != nil {
+			logrus.Fatal(err)
+		}
+
+		var containers_debarshi []map[string]interface{}
+
+		err = json.Unmarshal(output, &containers_debarshi)
+		if err != nil {
+			logrus.Fatal(err)
+		}
+
+		args = []string{"ps", "--all", "--sort", "names", "--filter", "label=com.github.containers.toolbox=true", "--format", "json"}
+		output, err = utils.PodmanOutput(args...)
+		if err != nil {
+			logrus.Fatal(err)
+		}
+
+		var containers_containers []map[string]interface{}
+
+		err = json.Unmarshal(output, &containers_containers)
+		if err != nil {
+			logrus.Fatal(err)
+		}
+
+		containers := utils.JoinJson("ID", containers_debarshi, containers_containers)
+		for _, container := range(containers) {
+			err = removeContainer(container["ID"].(string))
+			if err != nil {
+				logrus.Error(err)
+			}
+		}
+	}	else {
+		if len(args) == 0 {
+			logrus.Fatal("Missing argument")
+		}
+
+		for _, containerName := range args {
+			// Check if the container exists
+			args := []string{"inspect", "--format", "json", "--type", "container", containerName}
+			output, err := utils.PodmanOutput(args...)
+			if err != nil {
+				logrus.Fatal(err)
+			}
+
+			var info []map[string]interface{}
+
+			err = json.Unmarshal(output, &info)
+			if err != nil {
+				panic(err)
+			}
+
+			// Check if it is a toolbox container
+			var labels map[string]interface{}
+
+			labels, _ = info[0]["Config"].(map[string]interface{})["Labels"].(map[string]interface{})
+
+			if labels["com.github.debarshiray.toolbox"] != "true" && labels["com.github.containers.toolbox"] != "true" {
+				logrus.Fatal("This is not a toolbox container")
+			}
+
+			// Try to remove it
+			err = removeContainer(containerName)
+			if err != nil {
+				logrus.Fatal(err)
+			}
+		}
+	}
+}
+
+func removeContainer(containerName string) error {
+	args := []string{"rm", containerName}
+	if rmFlags.forceDelete {
+		args = append(args, "--force")
+	}
+	err := utils.PodmanRun(args...)
+	if err != nil {
+		logrus.Error(err)
+	}
+	return nil
 }
