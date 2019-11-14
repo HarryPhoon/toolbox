@@ -22,18 +22,31 @@ import (
 	"github.com/spf13/cobra"
 
 	homedir "github.com/mitchellh/go-homedir"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
-var cfgFile string
-var Verbose bool
-
-var rootCmd = &cobra.Command{
-	Use:   "toolbox",
-	Short: "Unprivileged development environment",
-	Long: `Toolbox is a tool that offers a familiar RPM based environment for
+var (
+	cfgFile   string
+	rootFlags struct {
+		loglevel  string
+		assumeyes bool
+	}
+	rootCmd = &cobra.Command{
+		Use:   "toolbox",
+		Short: "Unprivileged development environment",
+		Long: `Toolbox is a tool that offers a familiar RPM based environment for
 developing and debugging software that runs fully unprivileged using Podman.`,
-}
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			// This sets up loggers for all commands
+			err := setUpLoggers()
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+	}
+)
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
@@ -47,16 +60,8 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
-	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.toolbox.yaml)")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	rootCmd.Flags().BoolP("log-level", "", false, "Log messages above specified level: debug, info, warn, error, fatal or panic (default 'error')")
-	rootCmd.Flags().BoolP("assumeyes", "y", false, "Automatically answer yes for all questions.")
+	rootCmd.PersistentFlags().StringVar(&rootFlags.loglevel, "log-level", "error", "Log messages above specified level: debug, info, warn, error, fatal or panic (default 'error')")
+	rootCmd.Flags().BoolVarP(&rootFlags.assumeyes, "assumeyes", "y", false, "Automatically answer yes for all questions.")
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -83,4 +88,17 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
 	}
+}
+
+func setUpLoggers() error {
+	logrus.SetOutput(os.Stdout)
+
+	lvl, err := logrus.ParseLevel(rootFlags.loglevel)
+	if err != nil {
+		return err
+	}
+
+	logrus.SetLevel(lvl)
+
+	return nil
 }
