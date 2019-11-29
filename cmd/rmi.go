@@ -48,12 +48,14 @@ func init() {
 
 func rmi(args []string) {
 	if rmiFlags.deleteAll {
+		logrus.Info("Fetching images with label=com.github.debarshiray.toolbox=true")
 		args := []string{"--filter", "label=com.github.debarshiray.toolbox=true"}
 		Dimages, err := utils.GetImages(args...)
 		if err != nil {
 			logrus.Fatal(err)
 		}
 
+		logrus.Info("Fetching images with label=com.github.containers.toolbox=true")
 		args = []string{"--filter", "label=com.github.containers.toolbox=true"}
 		Cimages, err := utils.GetImages(args...)
 		if err != nil {
@@ -62,6 +64,7 @@ func rmi(args []string) {
 
 		images := utils.JoinJSON("id", Dimages, Cimages)
 		for _, image := range images {
+			logrus.Infof("Deleting image %s", image["id"].(string))
 			err = removeImage(image["id"].(string))
 			if err != nil {
 				logrus.Error(err)
@@ -74,6 +77,7 @@ func rmi(args []string) {
 
 		for _, imageID := range args {
 			// Check if the container exists
+			logrus.Infof("Inspecting image %s", imageID)
 			args := []string{"inspect", "--format", "json", "--type", "image", imageID}
 			output, err := utils.PodmanOutput(args...)
 			if err != nil {
@@ -90,6 +94,7 @@ func rmi(args []string) {
 			// Check if it is a toolbox image
 			var labels map[string]interface{}
 
+			logrus.Info("Checking if the image is a toolbox image")
 			labels, _ = info[0]["Config"].(map[string]interface{})["Labels"].(map[string]interface{})
 
 			if labels["com.github.debarshiray.toolbox"] != "true" && labels["com.github.containers.toolbox"] != "true" {
@@ -97,6 +102,7 @@ func rmi(args []string) {
 			}
 
 			// Try to remove it
+			logrus.Infof("Removing image %s", imageID)
 			err = removeImage(imageID)
 			if err != nil {
 				logrus.Fatal(err)
