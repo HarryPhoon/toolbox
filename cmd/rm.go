@@ -48,12 +48,14 @@ func init() {
 
 func rm(args []string) {
 	if rmFlags.deleteAll {
+		logrus.Info("Fetching containers with label=com.github.debarshiray.toolbox=true")
 		args := []string{"--filter", "label=com.github.debarshiray.toolbox=true"}
 		Dcontainers, err := utils.GetContainers(args...)
 		if err != nil {
 			logrus.Fatal(err)
 		}
 
+		logrus.Info("Fetching containers with label=com.github.containers.toolbox=true")
 		args = []string{"--filter", "label=com.github.containers.toolbox=true"}
 		Ccontainers, err := utils.GetContainers(args...)
 		if err != nil {
@@ -63,6 +65,7 @@ func rm(args []string) {
 		containers := utils.JoinJSON("ID", Dcontainers, Ccontainers)
 
 		for _, container := range containers {
+			logrus.Infof("Deleting container %s", container["ID"].(string))
 			err = removeContainer(container["ID"].(string))
 			if err != nil {
 				logrus.Error(err)
@@ -75,6 +78,7 @@ func rm(args []string) {
 
 		for _, containerName := range args {
 			// Check if the container exists
+			logrus.Infof("Inspecting container %s", containerName)
 			args := []string{"inspect", "--format", "json", "--type", "container", containerName}
 			output, err := utils.PodmanOutput(args...)
 			if err != nil {
@@ -90,7 +94,7 @@ func rm(args []string) {
 
 			// Check if it is a toolbox container
 			var labels map[string]interface{}
-
+			logrus.Info("Checking if the container is a toolbox container")
 			labels, _ = info[0]["Config"].(map[string]interface{})["Labels"].(map[string]interface{})
 
 			if labels["com.github.debarshiray.toolbox"] != "true" && labels["com.github.containers.toolbox"] != "true" {
@@ -98,6 +102,7 @@ func rm(args []string) {
 			}
 
 			// Try to remove it
+			logrus.Infof("Removing container %s", containerName)
 			err = removeContainer(containerName)
 			if err != nil {
 				logrus.Fatal(err)
