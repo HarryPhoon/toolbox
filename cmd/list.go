@@ -21,6 +21,8 @@ import (
 	"text/tabwriter"
 
 	"github.com/containers/toolbox/utils"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -58,36 +60,43 @@ func list(cmd *cobra.Command, args []string) error {
 	if listFlags.listImages {
 		images, err = getImages()
 		if err != nil {
-			panic(err)
+			logrus.Error(err)
+			logrus.Debugf("%+v", err)
 		}
 	}
 
 	if listFlags.listContainers {
 		containers, err = getContainers()
 		if err != nil {
-			panic(err)
+			logrus.Error(err)
+			logrus.Debugf("%+v", err)
 		}
 	}
 
 	err = outputList(images, containers)
 	if err != nil {
-		panic(err)
+		logrus.Fatal(err)
+		logrus.Fatalf("%+v", err)
 	}
 
-	return nil
+	return err
 }
 
 func getContainers() ([]map[string]interface{}, error) {
+	logrus.Info("Fetching containers with label=com.github.debarshiray.toolbox=true")
 	args := []string{"-a", "--filter", "label=com.github.debarshiray.toolbox=true"}
 	Dcontainers, err := utils.GetContainers(args...)
 	if err != nil {
-		return nil, err
+		err = errors.Wrap(err, "Fetching of containers with com.github.debarshiray.toolbox=true failed")
+		logrus.Error(err)
 	}
 
+	logrus.Info("Fetching containers with label=com.github.containers.toolbox=true")
 	args = []string{"-a", "--filter", "label=com.github.containers.toolbox=true"}
 	Ccontainers, err := utils.GetContainers(args...)
 	if err != nil {
-		panic(err)
+		err = errors.Wrap(err, "Fetching of containers with com.github.containers.toolbox=true failed")
+		logrus.Error(err)
 	}
 
 	containers := utils.JoinJSON("ID", Dcontainers, Ccontainers)
@@ -96,16 +105,18 @@ func getContainers() ([]map[string]interface{}, error) {
 }
 
 func getImages() ([]map[string]interface{}, error) {
+	logrus.Info("Fetching images with label=com.github.debarshiray.toolbox=true")
 	args := []string{"--filter", "label=com.github.debarshiray.toolbox=true"}
 	Dimages, err := utils.GetImages(args...)
 	if err != nil {
-		return nil, err
+		logrus.Error(err)
 	}
 
+	logrus.Info("Fetching images with label=com.github.containers.toolbox=true")
 	args = []string{"--filter", "label=com.github.containers.toolbox=true"}
 	Cimages, err := utils.GetImages(args...)
 	if err != nil {
-		panic(err)
+		logrus.Error(err)
 	}
 
 	images := utils.JoinJSON("id", Dimages, Cimages)
