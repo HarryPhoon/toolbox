@@ -43,6 +43,10 @@ developing and debugging software that runs fully unprivileged using Podman.`,
 			if err != nil {
 				return err
 			}
+
+			// Here we could place some logic to take care of invoing toolbox or other commands from within container by piping them to the host
+			// FIXME
+
 			return nil
 		},
 	}
