@@ -2,10 +2,9 @@ package utils
 
 import (
 	"encoding/json"
+	"errors"
 	"os/exec"
 	"syscall"
-
-	"github.com/pkg/errors"
 )
 
 // GetContainers is a wrapper function around `podman ps --format json` command.
@@ -19,14 +18,14 @@ func GetContainers(args ...string) ([]map[string]interface{}, error) {
 	args = append([]string{"ps", "--format", "json"}, args...)
 	output, err := PodmanOutput(args...)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	var containers []map[string]interface{}
 
 	err = json.Unmarshal(output, &containers)
 	if err != nil {
-		return nil, errors.Wrap(err, "Problem while unmarshalling json with toolbox containers")
+		return nil, err
 	}
 
 	return containers, nil
@@ -43,14 +42,14 @@ func GetImages(args ...string) ([]map[string]interface{}, error) {
 	args = append([]string{"images", "--format", "json"}, args...)
 	output, err := PodmanOutput(args...)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	var images []map[string]interface{}
 
 	err = json.Unmarshal(output, &images)
 	if err != nil {
-		return nil, errors.Wrap(err, "Problem while unmarshalling json with toolbox images")
+		return nil, err
 	}
 
 	return images, nil
@@ -74,16 +73,17 @@ func PodmanRun(args ...string) error {
 	return nil
 }
 
+// FIXME: Handling exit codes globally is not really the best idea
 func handleErrorCode(err error) error {
 	if exitError, ok := err.(*exec.ExitError); ok {
 		ws := exitError.Sys().(syscall.WaitStatus)
 		switch ws.ExitStatus() {
 		case 1:
-			return errors.Errorf("No such container")
+			return errors.New("No such container/image")
 		case 2:
-			return errors.Errorf("Container is running")
+			return errors.New("Container is running")
 		case 125:
-			return errors.Errorf("Failed to inspect container")
+			return errors.New("Failed to inspect container")
 		default:
 			return err
 		}
