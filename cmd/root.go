@@ -64,7 +64,7 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().StringVar(&rootFlags.loglevel, "log-level", "error", "Log messages above specified level: debug, info, warn, error, fatal or panic (default 'error')")
+	rootCmd.PersistentFlags().StringVar(&rootFlags.loglevel, "log-level", "error", "Log messages above specified level: trace, debug, info, warn, error, fatal or panic")
 	rootCmd.Flags().BoolVarP(&rootFlags.assumeyes, "assumeyes", "y", false, "Automatically answer yes for all questions.")
 }
 
