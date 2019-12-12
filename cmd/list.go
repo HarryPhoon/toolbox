@@ -16,12 +16,12 @@ limitations under the License.
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"text/tabwriter"
 
 	"github.com/containers/toolbox/utils"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -87,7 +87,7 @@ func getContainers() ([]map[string]interface{}, error) {
 	args := []string{"-a", "--filter", "label=com.github.debarshiray.toolbox=true"}
 	Dcontainers, err := utils.GetContainers(args...)
 	if err != nil {
-		err = errors.Wrap(err, "Fetching of containers with com.github.debarshiray.toolbox=true failed")
+		err = errors.New("Fetching of containers with com.github.debarshiray.toolbox=true failed")
 		logrus.Error(err)
 	}
 
@@ -95,7 +95,7 @@ func getContainers() ([]map[string]interface{}, error) {
 	args = []string{"-a", "--filter", "label=com.github.containers.toolbox=true"}
 	Ccontainers, err := utils.GetContainers(args...)
 	if err != nil {
-		err = errors.Wrap(err, "Fetching of containers with com.github.containers.toolbox=true failed")
+		err = errors.New("Fetching of containers with com.github.containers.toolbox=true failed")
 		logrus.Error(err)
 	}
 
