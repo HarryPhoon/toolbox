@@ -16,14 +16,12 @@ limitations under the License.
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"text/tabwriter"
 
-	"github.com/spf13/cobra"
 	"github.com/containers/toolbox/utils"
+	"github.com/spf13/cobra"
 )
 
 var listFlags struct {
@@ -80,24 +78,14 @@ func list(cmd *cobra.Command, args []string) error {
 }
 
 func getContainers() ([]map[string]interface{}, error) {
-	args := []string{"ps", "--all", "--sort", "names", "--filter", "label=com.github.debarshiray.toolbox=true", "--format", "json"}
-	cmd := exec.Command("podman", args...)
-	output, err := cmd.Output()
-
-	var containers_debarshi []map[string]interface{}
-
-	err = json.Unmarshal(output, &containers_debarshi)
+	args := []string{"-a", "--filter", "label=com.github.debarshiray.toolbox=true"}
+	Dcontainers, err := utils.GetContainers(args...)
 	if err != nil {
 		return nil, err
 	}
 
-	args = []string{"ps", "--all", "--sort", "names", "--filter", "label=com.github.containers.toolbox=true", "--format", "json"}
-	cmd = exec.Command("podman", args...)
-	output, err = cmd.Output()
-
-	var containers_containers []map[string]interface{}
-
-	err = json.Unmarshal(output, &containers_containers)
+	args = []string{"-a", "--filter", "label=com.github.containers.toolbox=true"}
+	Ccontainers, err := utils.GetContainers(args...)
 	if err != nil {
 		panic(err)
 	}
@@ -108,24 +96,14 @@ func getContainers() ([]map[string]interface{}, error) {
 }
 
 func getImages() ([]map[string]interface{}, error) {
-	args := []string{"images", "--all", "--sort", "names", "--filter", "label=com.github.debarshiray.toolbox=true", "--format", "json"}
-	cmd := exec.Command("podman", args...)
-	output, err := cmd.Output()
-
-	var imgs_debarshi []map[string]interface{}
-
-	err = json.Unmarshal(output, &imgs_debarshi)
+	args := []string{"--filter", "label=com.github.debarshiray.toolbox=true"}
+	Dimages, err := utils.GetImages(args...)
 	if err != nil {
 		return nil, err
 	}
 
-	args = []string{"images", "--all", "--sort", "names", "--filter", "label=com.github.containers.toolbox=true", "--format", "json"}
-	cmd = exec.Command("podman", args...)
-	output, err = cmd.Output()
-
-	var imgs_containers []map[string]interface{}
-
-	err = json.Unmarshal(output, &imgs_containers)
+	args = []string{"--filter", "label=com.github.containers.toolbox=true"}
+	Cimages, err := utils.GetImages(args...)
 	if err != nil {
 		panic(err)
 	}
