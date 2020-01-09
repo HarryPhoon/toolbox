@@ -48,40 +48,26 @@ func init() {
 
 func rm(args []string) {
 	if rmFlags.deleteAll {
-		args := []string{"ps", "--all", "--sort", "names", "--filter", "label=com.github.debarshiray.toolbox=true", "--format", "json"}
-		output, err := utils.PodmanOutput(args...)
+		args := []string{"--filter", "label=com.github.debarshiray.toolbox=true"}
+		Dcontainers, err := utils.GetContainers(args...)
 		if err != nil {
 			logrus.Fatal(err)
 		}
 
-		var containers_debarshi []map[string]interface{}
-
-		err = json.Unmarshal(output, &containers_debarshi)
+		args = []string{"--filter", "label=com.github.containers.toolbox=true"}
+		Ccontainers, err := utils.GetContainers(args...)
 		if err != nil {
 			logrus.Fatal(err)
 		}
 
-		args = []string{"ps", "--all", "--sort", "names", "--filter", "label=com.github.containers.toolbox=true", "--format", "json"}
-		output, err = utils.PodmanOutput(args...)
-		if err != nil {
-			logrus.Fatal(err)
-		}
 
-		var containers_containers []map[string]interface{}
-
-		err = json.Unmarshal(output, &containers_containers)
-		if err != nil {
-			logrus.Fatal(err)
-		}
-
-		containers := utils.JoinJson("ID", containers_debarshi, containers_containers)
-		for _, container := range(containers) {
+		for _, container := range containers {
 			err = removeContainer(container["ID"].(string))
 			if err != nil {
 				logrus.Error(err)
 			}
 		}
-	}	else {
+	} else {
 		if len(args) == 0 {
 			logrus.Fatal("Missing argument")
 		}

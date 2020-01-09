@@ -48,33 +48,19 @@ func init() {
 
 func rmi(args []string) {
 	if rmiFlags.deleteAll {
-		args := []string{"images", "--all", "--filter", "label=com.github.debarshiray.toolbox=true", "--format", "json"}
-		output, err := utils.PodmanOutput(args...)
+		args := []string{"--filter", "label=com.github.debarshiray.toolbox=true"}
+		Dimages, err := utils.GetImages(args...)
 		if err != nil {
 			logrus.Fatal(err)
 		}
 
-		var images_debarshi []map[string]interface{}
-
-		err = json.Unmarshal(output, &images_debarshi)
+		args = []string{"--filter", "label=com.github.containers.toolbox=true"}
+		Cimages, err := utils.GetImages(args...)
 		if err != nil {
 			logrus.Fatal(err)
 		}
 
-		args = []string{"images", "--all", "--filter", "label=com.github.containers.toolbox=true", "--format", "json"}
-		output, err = utils.PodmanOutput(args...)
-		if err != nil {
-			logrus.Fatal(err)
-		}
-
-		var images_containers []map[string]interface{}
-
-		err = json.Unmarshal(output, &images_containers)
-		if err != nil {
-			logrus.Fatal(err)
-		}
-
-		images := utils.JoinJson("id", images_debarshi, images_containers)
+		images := utils.JoinJSON("id", Dimages, Cimages)
 		for _, image := range images {
 			err = removeImage(image["id"].(string))
 			if err != nil {
