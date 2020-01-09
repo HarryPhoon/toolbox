@@ -55,6 +55,34 @@ func GetImages(args ...string) ([]map[string]interface{}, error) {
 	return images, nil
 }
 
+// ImageExists checks using Podman if an image with given ID/name exists.
+//
+// Parameter image is a name or an id of an image.
+func ImageExists(image string) bool {
+	args := []string{"image", "exists", image}
+
+	err := PodmanRun(args...)
+	if err != nil {
+		return false
+	}
+
+	return true
+}
+
+// ContainerExists checks using Podman if a container with given ID/name exists.
+//
+// Parameter container is a name or an id of a container.
+func ContainerExists(container string) bool {
+	args := []string{"container", "exists", container}
+
+	err := PodmanRun(args...)
+	if err != nil {
+		return false
+	}
+
+	return true
+}
+
 func PodmanOutput(args ...string) ([]byte, error) {
 	cmd := exec.Command("podman", args...)
 	output, err := cmd.Output()
