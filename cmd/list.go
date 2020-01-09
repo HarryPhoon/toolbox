@@ -90,8 +90,8 @@ func getContainers() ([]map[string]interface{}, error) {
 		panic(err)
 	}
 
-	containers := utils.JoinJson("ID", containers_debarshi, containers_containers)
-	containers = utils.SortJson(containers, "Names", false)
+	containers := utils.JoinJSON("ID", Dcontainers, Ccontainers)
+	containers = utils.SortJSON(containers, "Names", false)
 	return containers, err
 }
 
@@ -108,8 +108,8 @@ func getImages() ([]map[string]interface{}, error) {
 		panic(err)
 	}
 
-	images := utils.JoinJson("id", imgs_debarshi, imgs_containers)
-	images = utils.SortJson(images, "names", true)
+	images := utils.JoinJSON("id", Dimages, Cimages)
+	images = utils.SortJSON(images, "names", true)
 
 	return images, err
 }
@@ -118,10 +118,11 @@ func outputList(images, containers []map[string]interface{}) error {
 	if len(images) != 0 {
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 		fmt.Fprintf(w, "%s\t%s\t%s\n", "IMAGE ID", "IMAGE NAME", "CREATED")
+
 		for _, image := range images {
-			id := image["id"].(string)[:12]
-			name := image["names"].([]interface{})[0]
-			created := image["created"]
+			id := utils.ShortID(image["id"].(string))
+			name := image["names"].([]interface{})[0].(string)
+			created := image["created"].(string)
 			fmt.Fprintf(w, "%s\t%s\t%s\n", id, name, created)
 		}
 		w.Flush()
@@ -134,12 +135,13 @@ func outputList(images, containers []map[string]interface{}) error {
 	if len(containers) != 0 {
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", "CONTAINER ID", "CONTAINER NAME", "CREATED", "STATUS", "IMAGE NAME")
+
 		for _, container := range containers {
 			id := container["ID"].(string)[:12]
-			name := container["Names"]
-			created := container["Created"]
-			status := container["Status"]
-			imageName := container["Image"]
+			name := container["Names"].(string)
+			created := container["Created"].(string)
+			status := container["Status"].(string)
+			imageName := container["Image"].(string)
 			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", id, name, created, status, imageName)
 		}
 		w.Flush()

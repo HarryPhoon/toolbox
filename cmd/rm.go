@@ -60,6 +60,7 @@ func rm(args []string) {
 			logrus.Fatal(err)
 		}
 
+		containers := utils.JoinJSON("ID", Dcontainers, Ccontainers)
 
 		for _, container := range containers {
 			err = removeContainer(container["ID"].(string))
