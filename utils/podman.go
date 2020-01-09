@@ -5,7 +5,43 @@ import (
 	"errors"
 	"os/exec"
 	"syscall"
+
+	"github.com/mcuadros/go-version"
+
+	"github.com/sirupsen/logrus"
 )
+
+// CheckPodmanVersion compares provided version with the version of Podman.
+//
+// Takes in one string parameter that should be in the format that is used for versioning (eg. 1.0.0, 2.5.1-dev).
+//
+// Returns true if Podman version is at least equal to the provided version.
+// Returns false if Podman version is not sufficient.
+func CheckPodmanVersion(requiredVersion string) bool {
+	args := []string{"version", "-f", "json"}
+	output, err := PodmanOutput(args...)
+	if err != nil {
+		logrus.Error(err)
+		return false
+	}
+
+	var jsonoutput map[string]interface{}
+	err = json.Unmarshal(output, &jsonoutput)
+	if err != nil {
+		logrus.Error(err)
+		return false
+	}
+
+	podmanVersion := jsonoutput["Client"].(map[string]interface{})["Version"].(string)
+	podmanVersion = version.Normalize(podmanVersion)
+	requiredVersion = version.Normalize(requiredVersion)
+
+	if version.CompareSimple(podmanVersion, requiredVersion) >= 0 {
+		return true
+	}
+
+	return false
+}
 
 // GetContainers is a wrapper function around `podman ps --format json` command.
 //
