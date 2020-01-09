@@ -7,12 +7,39 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/shirou/gopsutil/host"
 	"github.com/sirupsen/logrus"
 )
 
 const (
 	idTruncLength = 12
 )
+
+// GetHostPlatform returns the name of host system
+//
+// Examples:
+// - host is Fedora, returned string is 'fedora'
+// - host is Ubuntu, returned string is 'ubuntu'
+func GetHostPlatform() string {
+	hostInfo, err := host.Info()
+	if err != nil {
+		logrus.Error(err)
+	}
+	return hostInfo.Platform
+}
+
+// GetHostVersionID returns the version of host system
+//
+// Examples:
+// - host is Fedora 31, returned string is '31'
+// - host is Ubuntu 19.04, returned string is '19.04'
+func GetHostVersionID() string {
+	hostInfo, err := host.Info()
+	if err != nil {
+		logrus.Error(err)
+	}
+	return hostInfo.PlatformVersion
+}
 
 // ShortID shortens provided id to first 12 characters
 func ShortID(id string) string {
