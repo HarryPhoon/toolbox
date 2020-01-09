@@ -119,6 +119,12 @@ func ContainerExists(container string) bool {
 	return true
 }
 
+// PodmanOutput is a wrapper around Podman that returns the output of the invoked command.
+//
+// Parameter args accepts an array of strings to be passed to Podman.
+//
+// If no problem while executing a command occurs, then the output of the command is returned in the first value.
+// If a problem occurs, then the error code is returned in the second value.
 func PodmanOutput(args ...string) ([]byte, error) {
 	cmd := exec.Command("podman", args...)
 	output, err := cmd.Output()
@@ -128,6 +134,12 @@ func PodmanOutput(args ...string) ([]byte, error) {
 	return output, nil
 }
 
+// PodmanRun is a wrapper around Podman that does not return the output of the invoked command.
+//
+// Parameter args accepts an array of strings to be passed to Podman.
+//
+// If no problem while executing a command occurs, then the returned value is nil.
+// If a problem occurs, then the error code is returned.
 func PodmanRun(args ...string) error {
 	cmd := exec.Command("podman", args...)
 	err := cmd.Run()
