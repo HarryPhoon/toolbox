@@ -14,6 +14,7 @@ const (
 	idTruncLength = 12
 )
 
+// ShortID shortens provided id to first 12 characters
 func ShortID(id string) string {
 	if len(id) > idTruncLength {
 		return id[:idTruncLength]
