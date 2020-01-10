@@ -110,6 +110,30 @@ func create(cmd *cobra.Command, args []string) error {
 	}
 	logrus.Infof("Image '%s' was found", imageName)
 
+	// If the image was not pulled that check if it is a Toolbox image
+	if imageFound {
+		logrus.Infof("Checking if '%s' is a Toolbox image", imageName)
+		inspectInfo, err := utils.PodmanInspect(imageName)
+		if err != nil {
+			logrus.Fatalf("Unable to inspect image '%s'", imageName)
+		}
+		imageLabels := inspectInfo["Labels"].(map[string]interface{})
+
+		isToolboxImage := false
+		if imageLabels["com.github.debarshiray.toolbox"] == "true" {
+			isToolboxImage = true
+		}
+		if imageLabels["com.github.containers.toolbox"] == "true" {
+			isToolboxImage = true
+		}
+
+		if !isToolboxImage {
+			logrus.Fatalf("Image '%s' is not a Toolbox image", imageName)
+		} else {
+			logrus.Infof("Image '%s' is a Toolbox image", imageName)
+		}
+	}
+
 	logrus.Info("Preparing dbus system bus address")
 	// Inside of a toolbox we want to be able to access dbus for using flatpak-spawn and for users, who work with dbus.
 	dbusSystemBusPath := strings.Split(viper.GetString("DBUS_SYSTEM_BUS_ADDRESS"), "=")[1]
