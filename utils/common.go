@@ -3,6 +3,8 @@ package utils
 import (
 	"fmt"
 	"os"
+	"os/exec"
+	"os/user"
 	"regexp"
 	"sort"
 	"strconv"
@@ -40,6 +42,34 @@ func GetHostVersionID() string {
 		logrus.Error(err)
 	}
 	return hostInfo.PlatformVersion
+}
+
+func GetGroupForSudo() string {
+	group := ""
+	if _, err := user.LookupGroup("sudo"); err != nil {
+		group = "sudo"
+	} else if _, err := user.LookupGroup("wheel"); err != nil {
+		group = "wheel"
+	}
+	return group
+}
+
+func GetMountPoint(target string) (string, error) {
+	cmd := exec.Command("findmnt", "--noheadings", "--output", "TARGET", target)
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.Trim(string(output), "\n"), nil
+}
+
+func GetMountOptions(target string) (string, error) {
+	cmd := exec.Command("findmnt", "--noheadings", "--output", "OPTIONS", target)
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.Trim(string(output), "\n"), nil
 }
 
 // ShortID shortens provided id to first 12 characters
@@ -137,4 +167,13 @@ func SortJSON(json []map[string]interface{}, key string, hasInterface bool) []ma
 	})
 
 	return json
+}
+
+func SystemctlOutput(args ...string) ([]byte, error) {
+	cmd := exec.Command("systemctl", args...)
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+	return output, nil
 }
