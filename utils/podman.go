@@ -145,8 +145,9 @@ func ContainerExists(container string) bool {
 // If a problem occurs, then the error code is returned in the second value.
 func PodmanOutput(args ...string) ([]byte, error) {
 	cmd := exec.Command("podman", args...)
-	output, err := cmd.Output()
+	output, err := cmd.CombinedOutput()
 	if err != nil {
+		logrus.Debug(string(output))
 		return nil, handleErrorCode(err)
 	}
 	return output, nil
