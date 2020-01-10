@@ -33,9 +33,16 @@ var (
 		image   string
 		release string
 	}
-	ulimitHost         = ""
-	homeCanonical      = ""
-	toolboxProfileBind = ""
+	ulimitHost               = []string{}
+	homeCanonical            = ""
+	toolboxProfileBind       = []string{}
+	sudoGroup                = ""
+	kcmSocket                = ""
+	kcmSocketBind            = []string{}
+	usrMountPoint            = ""
+	usrMountSourceFlags      = ""
+	usrMountDestinationFlags = "ro"
+	dbusSystemBusAddress     = ""
 )
 
 var createCmd = &cobra.Command{
@@ -85,6 +92,7 @@ func create(cmd *cobra.Command, args []string) error {
 			createFlags.release = "31"
 		}
 	}
+
 	// If no container name is specified then use the image name and it's version
 	var containerName string
 	if len(args) != 0 {
@@ -111,6 +119,7 @@ func create(cmd *cobra.Command, args []string) error {
 	if !imageFound {
 		logrus.Fatalf("Image '%s' was not found", imageName)
 	}
+
 	logrus.Infof("Image '%s' was found", imageName)
 
 	// If the image was not pulled that check if it is a Toolbox image
@@ -137,25 +146,100 @@ func create(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	logrus.Info("Looking for group for sudo")
+	sudoGroup = utils.GetGroupForSudo()
+	if sudoGroup == "" {
+		logrus.Fatal("Group for sudo was not found")
+	}
+
+	// Start assembling the arguments for Podman
+	createArgs := []string{
+		"create",
+		"--dns", "none",
+		"--group-add", sudoGroup,
+		"--hostname", "toolbox",
+		"--ipc", "host",
+		"--label", "com.github.containers.toolbox=true",
+		"--name", containerName,
+		"--network", "host",
+		"--no-hosts",
+		"--pid", "host",
+		"--privileged",
+		"--security-opt", "label=disable",
+		"--userns=keep-id",
+		"--user", "root:root"}
+
 	logrus.Info("Checking if /etc/profile.d/toolbox.sh exists")
 	if utils.FileExists("/etc/profile.d/toolbox.sh") {
 		logrus.Info("File /etc/profile.d/toolbox.sh exists")
-		toolboxProfileBind = "--volume /etc/profile.d/toolbox.sh:/etc/profile.d/toolbox.sh:ro"
+		toolboxProfileBind = []string{"--volume", "/etc/profile.d/toolbox.sh:/etc/profile.d/toolbox.sh:ro"}
+		createArgs = append(createArgs, toolboxProfileBind...)
 	}
 
-	logrus.Info("Preparing dbus system bus address")
+	logrus.Info("Checking if /usr is mounted read-only or read-write")
+	usrMountPoint, err = utils.GetMountPoint("/usr")
+	if err != nil {
+		logrus.Error(err)
+		logrus.Fatal("Failed to get the mount-point of /usr")
+	}
+
+	logrus.Infof("Mount-point of /usr is %ss", usrMountPoint)
+	usrMountSourceFlags, err = utils.GetMountOptions(usrMountPoint)
+	if err != nil {
+		logrus.Error(err)
+		logrus.Fatalf("Failed to get the mount options of %s", usrMountPoint)
+	}
+
+	logrus.Infof("Mount flags of /usr on the host are %s", usrMountSourceFlags)
+	if !strings.Contains(usrMountSourceFlags, "ro") {
+		usrMountDestinationFlags = "rw"
+	}
+
 	// Inside of a toolbox we want to be able to access dbus for using flatpak-spawn and for users, who work with dbus.
-	dbusSystemBusPath := strings.Split(viper.GetString("DBUS_SYSTEM_BUS_ADDRESS"), "=")[1]
-	dbusSystemBusPath, err = filepath.EvalSymlinks(dbusSystemBusPath)
+	logrus.Info("Preparing dbus system bus address")
+	dbusSystemBusAddress = strings.Split(viper.GetString("DBUS_SYSTEM_BUS_ADDRESS"), "=")[1]
+	dbusSystemBusAddress, err = filepath.EvalSymlinks(dbusSystemBusAddress)
 	if err != nil {
 		logrus.Error(err)
 	}
-	viper.Set("DBUS_SYSTEM_BUS_ADDRESS", dbusSystemBusPath)
+
+	dbusSystemBusAddressBind := []string{"--volume", fmt.Sprintf("%s:%s", dbusSystemBusAddress, dbusSystemBusAddress)}
+	createArgs = append(createArgs, dbusSystemBusAddressBind...)
+
+	logrus.Info("Preparing sssd-kcm socket")
+	args = []string{"show", "--value", "--property", "Listen", "sssd-kcm.socket"}
+	output, err := utils.SystemctlOutput(args...)
+	if err != nil {
+		logrus.Error("Failed to use 'systemctl show'")
+	}
+
+	kcmSocket = strings.Trim(string(output), "\n")
+
+	if kcmSocket == "" {
+		logrus.Error("Failed to read property Listen from sssd-kcm.socket")
+	} else {
+		logrus.Infof("Checking value %s of property Listen in sssd-kcm.socket", kcmSocket)
+		if !strings.Contains(kcmSocket, " (Stream)") {
+			kcmSocket = ""
+			logrus.Error("Unknown socket in sssd-kcm.socket\nExpected SOCK_STREAM")
+		}
+		if !strings.Contains(kcmSocket, "/") {
+			kcmSocket = ""
+			logrus.Error("Unknown socket in sssd-kcm.socket\nExpected file system socket in the AF_UNIX family")
+		}
+	}
+
+	logrus.Infof("Parsing value %s of property Listen in sssd-kcm.socket", kcmSocket)
+	if kcmSocket != "" {
+		kcmSocket = strings.TrimSuffix(kcmSocket, " (Stream)")
+		kcmSocketBind = []string{"--volume", fmt.Sprintf("%s:%s", kcmSocket, kcmSocket)}
+		createArgs = append(createArgs, kcmSocketBind...)
+	}
 
 	logrus.Info("Checking if 'podman create' supports option '--ulimit host'")
 	if utils.CheckPodmanVersion("1.5.0") {
 		logrus.Info("Option '--ulimit host' is supported")
-		ulimitHost = "--ulimit host"
+		ulimitHost = []string{"--ulimit", "host"}
 	} else {
 		logrus.Info("Option '--ulimit host' is not supported")
 	}
@@ -165,7 +249,7 @@ func create(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		logrus.Fatalf("Failed to canonicalize %s", homeEnv)
 	}
-	logrus.Infof("%s canonicalized to %s", homeEnv, homeCanonical)
+	logrus.Infof("Canonicalized %s to %s", homeEnv, homeCanonical)
 
 	conn, err := dbus.SessionBus()
 	if err != nil {
@@ -178,6 +262,26 @@ func create(cmd *cobra.Command, args []string) error {
 	call := SessionHelper.Call("org.freedesktop.Flatpak.SessionHelper.RequestSession", 0)
 	if call.Err != nil {
 		logrus.Fatal("Failed to call org.freedesktop.Flatpak.SessionHelper.RequestSession")
+	}
+
+	createArgs = append(createArgs, []string{
+		"--volume", fmt.Sprintf("%s:%s", viper.GetString("XDG_RUNTIME_DIR"), viper.GetString("XDG_RUNTIME_DIR")),
+		"--volume", fmt.Sprintf("%s/.flatpak-helper/monitor:/run/host/monitor", viper.GetString("XDG_RUNTIME_DIR")),
+		"--volume", fmt.Sprintf("%s:%s:rslave", homeCanonical, homeCanonical),
+		"--volume", "/etc:/run/host/etc",
+		"--volume", "/dev:/dev:rslave",
+		"--volume", "/media:/media:rslave",
+		"--volume", "/mnt:/mnt:rslave",
+		"--volume", "/run:/run/host/run:rslave",
+		"--volume", "/tmp:/run/host/tmp:rslave",
+		"--volume", fmt.Sprintf("/usr:/run/host/usr:%s,rslave", usrMountDestinationFlags),
+		"--volume", "/var:/run/host/var:rslave",
+		imageName,
+		"sleep", "99999999999"}...)
+
+	output, err = utils.PodmanOutput(createArgs...)
+	if err != nil {
+		logrus.Fatalf("Failed to create container %s", containerName)
 	}
 
 	return nil
