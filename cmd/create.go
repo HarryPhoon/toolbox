@@ -22,6 +22,7 @@ import (
 
 	"github.com/containers/toolbox/utils"
 
+	"github.com/godbus/dbus/v5"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -32,7 +33,9 @@ var (
 		image   string
 		release string
 	}
-	ulimitHost = ""
+	ulimitHost         = ""
+	homeCanonical      = ""
+	toolboxProfileBind = ""
 )
 
 var createCmd = &cobra.Command{
@@ -134,6 +137,12 @@ func create(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	logrus.Info("Checking if /etc/profile.d/toolbox.sh exists")
+	if utils.FileExists("/etc/profile.d/toolbox.sh") {
+		logrus.Info("File /etc/profile.d/toolbox.sh exists")
+		toolboxProfileBind = "--volume /etc/profile.d/toolbox.sh:/etc/profile.d/toolbox.sh:ro"
+	}
+
 	logrus.Info("Preparing dbus system bus address")
 	// Inside of a toolbox we want to be able to access dbus for using flatpak-spawn and for users, who work with dbus.
 	dbusSystemBusPath := strings.Split(viper.GetString("DBUS_SYSTEM_BUS_ADDRESS"), "=")[1]
@@ -149,6 +158,26 @@ func create(cmd *cobra.Command, args []string) error {
 		ulimitHost = "--ulimit host"
 	} else {
 		logrus.Info("Option '--ulimit host' is not supported")
+	}
+
+	homeEnv := strings.Split(viper.GetString("HOME"), "=")[0]
+	homeCanonical, err = filepath.EvalSymlinks(homeEnv)
+	if err != nil {
+		logrus.Fatalf("Failed to canonicalize %s", homeEnv)
+	}
+	logrus.Infof("%s canonicalized to %s", homeEnv, homeCanonical)
+
+	conn, err := dbus.SessionBus()
+	if err != nil {
+		logrus.Error("Failed to connect to Session Bus")
+	}
+	defer conn.Close()
+
+	logrus.Info("Calling org.freedesktop.Flatpak.SessionHelper.RequestSession")
+	SessionHelper := conn.Object("org.freedesktop.Flatpak", "/org/freedesktop/Flatpak/SessionHelper")
+	call := SessionHelper.Call("org.freedesktop.Flatpak.SessionHelper.RequestSession", 0)
+	if call.Err != nil {
+		logrus.Fatal("Failed to call org.freedesktop.Flatpak.SessionHelper.RequestSession")
 	}
 
 	return nil
