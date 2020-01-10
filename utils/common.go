@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"sort"
 	"strconv"
@@ -71,6 +72,14 @@ func ReferenceHasDomain(text string) bool {
 	}
 
 	return true
+}
+
+func FileExists(path string) bool {
+	if _, err := os.Stat(path); err == nil {
+		return true
+	} else {
+		return false
+	}
 }
 
 // NumberPrompt creates an interactive prompt that expects and returns an integer
