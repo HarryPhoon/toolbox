@@ -16,6 +16,7 @@ limitations under the License.
 package cmd
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -81,6 +82,22 @@ func create(cmd *cobra.Command, args []string) error {
 			createFlags.release = "31"
 		}
 	}
+	// If no container name is specified then use the image name and it's version
+	var containerName string
+	if len(args) != 0 {
+		containerName = args[0]
+	} else {
+		containerName = createFlags.image + "-" + createFlags.release
+	}
+
+	logrus.Infof("Checking if container %s already exists", containerName)
+	containerList, err := utils.GetContainers("--all", "--filter", fmt.Sprintf("name=%s", containerName))
+	if err != nil {
+		logrus.Error(err)
+	}
+	if len(containerList) != 0 {
+		logrus.Fatalf("Container %s already exists", containerName)
+	}
 
 	imageName := createFlags.image + ":" + createFlags.release
 	logrus.Infof("Used image will be: %s", imageName)
@@ -96,7 +113,7 @@ func create(cmd *cobra.Command, args []string) error {
 	logrus.Info("Preparing dbus system bus address")
 	// Inside of a toolbox we want to be able to access dbus for using flatpak-spawn and for users, who work with dbus.
 	dbusSystemBusPath := strings.Split(viper.GetString("DBUS_SYSTEM_BUS_ADDRESS"), "=")[1]
-	dbusSystemBusPath, err := filepath.EvalSymlinks(dbusSystemBusPath)
+	dbusSystemBusPath, err = filepath.EvalSymlinks(dbusSystemBusPath)
 	if err != nil {
 		logrus.Error(err)
 	}
