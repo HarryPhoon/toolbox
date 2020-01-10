@@ -43,6 +43,24 @@ func CheckPodmanVersion(requiredVersion string) bool {
 	return false
 }
 
+// PodmanInspect is a wrapper around 'podman inspect' command
+func PodmanInspect(target string) (map[string]interface{}, error) {
+	args := []string{"inspect", target}
+	output, err := PodmanOutput(args...)
+	if err != nil {
+		return nil, err
+	}
+
+	var info []map[string]interface{}
+
+	err = json.Unmarshal(output, &info)
+	if err != nil {
+		return nil, err
+	}
+
+	return info[0], nil
+}
+
 // GetContainers is a wrapper function around `podman ps --format json` command.
 //
 // Parameter args accepts an array of strings to be passed to the wrapped command (eg. ["-a", "--filter", "123"]).
