@@ -64,7 +64,7 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().StringVar(&rootFlags.loglevel, "log-level", "error", "Log messages above specified level: trace, debug, info, warn, error, fatal or panic")
+	rootCmd.PersistentFlags().StringVar(&rootFlags.loglevel, "log-level", "warn", "Log messages above specified level: trace, debug, info, warn, error, fatal or panic")
 	rootCmd.Flags().BoolVarP(&rootFlags.assumeyes, "assumeyes", "y", false, "Automatically answer yes for all questions.")
 }
 
@@ -96,6 +96,10 @@ func initConfig() {
 
 func setUpLoggers() error {
 	logrus.SetOutput(os.Stdout)
+	logrus.SetFormatter(&logrus.TextFormatter{
+		DisableTimestamp:       true,
+		DisableLevelTruncation: true,
+	})
 
 	lvl, err := logrus.ParseLevel(rootFlags.loglevel)
 	if err != nil {
