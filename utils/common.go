@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -76,6 +77,15 @@ func GetMountOptions(target string) (string, error) {
 		return "", err
 	}
 	return strings.Trim(string(output), "\n"), nil
+}
+
+// GetUID returns the user ID
+func GetUID() (string, error) {
+	currentUser, err := user.Current()
+	if err != nil {
+		return "", errors.New("Failed getting user information")
+	}
+	return currentUser.Uid, nil
 }
 
 // ShortID shortens provided id to first 12 characters.
