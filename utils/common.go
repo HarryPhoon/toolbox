@@ -19,7 +19,7 @@ const (
 	idTruncLength = 12
 )
 
-// GetHostPlatform returns the name of host system
+// GetHostPlatform returns the name of host system.
 //
 // Examples:
 // - host is Fedora, returned string is 'fedora'
@@ -32,7 +32,7 @@ func GetHostPlatform() string {
 	return hostInfo.Platform
 }
 
-// GetHostVersionID returns the version of host system
+// GetHostVersionID returns the version of host system.
 //
 // Examples:
 // - host is Fedora 31, returned string is '31'
@@ -45,6 +45,9 @@ func GetHostVersionID() string {
 	return hostInfo.PlatformVersion
 }
 
+// GetGroupForSudo returns the name of the sudoers group.
+//
+// Some distro call it 'sudo' (eg. Ubuntu) and some call it 'wheel' (eg. Fedora).
 func GetGroupForSudo() string {
 	group := ""
 	if _, err := user.LookupGroup("sudo"); err != nil {
@@ -55,6 +58,7 @@ func GetGroupForSudo() string {
 	return group
 }
 
+// GetMountPoint returns the mount point of a target.
 func GetMountPoint(target string) (string, error) {
 	cmd := exec.Command("findmnt", "--noheadings", "--output", "TARGET", target)
 	output, err := cmd.Output()
@@ -64,6 +68,7 @@ func GetMountPoint(target string) (string, error) {
 	return strings.Trim(string(output), "\n"), nil
 }
 
+// GetMountOptions returns the mount options of a target.
 func GetMountOptions(target string) (string, error) {
 	cmd := exec.Command("findmnt", "--noheadings", "--output", "OPTIONS", target)
 	output, err := cmd.Output()
@@ -73,7 +78,7 @@ func GetMountOptions(target string) (string, error) {
 	return strings.Trim(string(output), "\n"), nil
 }
 
-// ShortID shortens provided id to first 12 characters
+// ShortID shortens provided id to first 12 characters.
 func ShortID(id string) string {
 	if len(id) > idTruncLength {
 		return id[:idTruncLength]
@@ -81,7 +86,7 @@ func ShortID(id string) string {
 	return id
 }
 
-// ReferenceCanBeID checks if the provided text matches a format for an ID
+// ReferenceCanBeID checks if the provided text matches a format for an ID.
 func ReferenceCanBeID(text string) bool {
 	matched, err := regexp.MatchString(`^[a-f0-9]\{6,64\}$`, text)
 	if err != nil {
@@ -90,7 +95,7 @@ func ReferenceCanBeID(text string) bool {
 	return matched
 }
 
-// ReferenceHasDomain checks if the provided text has a domain definition in it
+// ReferenceHasDomain checks if the provided text has a domain definition in it.
 func ReferenceHasDomain(text string) bool {
 	i := strings.IndexRune(text, '/')
 	if i == -1 {
@@ -105,10 +110,14 @@ func ReferenceHasDomain(text string) bool {
 	return true
 }
 
+// FileExists wraps around os.Stat providing a nice interface for checking an existence of a file given by parameter path.
 func FileExists(path string) bool {
 	if _, err := os.Stat(path); err == nil {
 		return true
-	} else {
+	}
+	return false
+}
+
 // UpdateContainerAndImageNames takes care of standardizing names of containers and images.
 //
 // If no image name is specified then the base image will reflect the platform of the host (even the version).
