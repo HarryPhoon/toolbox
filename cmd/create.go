@@ -79,11 +79,7 @@ func create(cmd *cobra.Command, args []string) error {
 	containerName, imageName := utils.UpdateContainerAndImageNames(containerName, createFlags.image, createFlags.release)
 
 	logrus.Infof("Checking if container %s already exists", containerName)
-	containerList, err := utils.GetContainers("--all", "--filter", fmt.Sprintf("name=%s", containerName))
-	if err != nil {
-		logrus.Error(err)
-	}
-	if len(containerList) != 0 {
+	if utils.ContainerExists(containerName) {
 		logrus.Fatalf("Container %s already exists", containerName)
 	}
 
@@ -153,7 +149,7 @@ func create(cmd *cobra.Command, args []string) error {
 	}
 
 	logrus.Info("Checking if /usr is mounted read-only or read-write")
-	usrMountPoint, err = utils.GetMountPoint("/usr")
+	usrMountPoint, err := utils.GetMountPoint("/usr")
 	if err != nil {
 		logrus.Error(err)
 		logrus.Fatal("Failed to get the mount-point of /usr")

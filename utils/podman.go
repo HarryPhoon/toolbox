@@ -126,8 +126,8 @@ func ImageExists(image string) bool {
 // ContainerExists checks using Podman if a container with given ID/name exists.
 //
 // Parameter container is a name or an id of a container.
-func ContainerExists(container string) bool {
-	args := []string{"container", "exists", container}
+func ContainerExists(containerName string) bool {
+	args := []string{"container", "exists", containerName}
 
 	err := PodmanRun(args...)
 	if err != nil {
