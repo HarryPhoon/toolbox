@@ -17,6 +17,7 @@ package cmd
 
 import (
 	"fmt"
+	"os/user"
 	"path/filepath"
 	"strings"
 
@@ -35,6 +36,9 @@ var (
 	}
 	ulimitHost               = []string{}
 	homeCanonical            = ""
+	homeLink                 = ""
+	mediaLink                = ""
+	mntLink                  = ""
 	toolboxProfileBind       = []string{}
 	sudoGroup                = ""
 	kcmSocket                = ""
@@ -70,10 +74,10 @@ var (
 )
 
 var createCmd = &cobra.Command{
-	Use:   "create [NAME]",
+	Use:   "create [flags] NAME",
 	Short: "Create a new toolbox container",
 	Run: func(cmd *cobra.Command, args []string) {
-		create(cmd, args)
+		create(args)
 	},
 	Args: cobra.MaximumNArgs(1),
 }
@@ -88,7 +92,7 @@ func init() {
 	viper.SetDefault("DBUS_SYSTEM_BUS_ADDRESS", "unix:path=/var/run/dbus/system_bus_socket")
 }
 
-func create(cmd *cobra.Command, args []string) error {
+func create(args []string) error {
 	containerName := ""
 
 	if len(args) != 0 {
@@ -99,7 +103,7 @@ func create(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Toolbox should work even when some options are not specified. This is where the default values are defined.
+	// Toolbox should work even when some options are not specified. This is where the default values are defined and existing standardized.
 	containerName, imageName := utils.UpdateContainerAndImageNames(containerName, createFlags.image, createFlags.release)
 
 	logrus.Infof("Checking if container %s already exists", containerName)
@@ -114,14 +118,17 @@ func create(cmd *cobra.Command, args []string) error {
 
 	if !imageFound {
 		logrus.Fatalf("Image '%s' was not found", imageName)
-	}
 
-	logrus.Infof("Image '%s' was found", imageName)
+		// TODO: Try to pull the image from a faraway universe
+		// At the same time check if it is a Toolbox image before pulling it
+	} else {
+		logrus.Infof("Image '%s' was found", imageName)
+	}
 
 	// If the image was not pulled that check if it is a Toolbox image
 	if imageFound {
 		logrus.Infof("Checking if '%s' is a Toolbox image", imageName)
-		inspectInfo, err := utils.PodmanInspect(imageName)
+		inspectInfo, err := utils.PodmanInspect("image", imageName)
 		if err != nil {
 			logrus.Fatalf("Unable to inspect image '%s'", imageName)
 		}
@@ -137,9 +144,9 @@ func create(cmd *cobra.Command, args []string) error {
 
 		if !isToolboxImage {
 			logrus.Fatalf("Image '%s' is not a Toolbox image", imageName)
-		} else {
-			logrus.Infof("Image '%s' is a Toolbox image", imageName)
 		}
+
+		logrus.Infof("Image '%s' is a Toolbox image", imageName)
 	}
 
 	logrus.Info("Looking for group for sudo")
@@ -147,11 +154,21 @@ func create(cmd *cobra.Command, args []string) error {
 	if sudoGroup == "" {
 		logrus.Fatal("Group for sudo was not found")
 	}
+	logrus.Infof("Group for sudo is %s", sudoGroup)
+
+	logrus.Info("Getting user ID")
+	currentUser, err := user.Current()
+	if err != nil {
+		logrus.Fatal("Failed to get user information")
+	}
+	userID := currentUser.Uid
+	logrus.Infof("User ID is %s", userID)
 
 	// Start assembling the arguments for Podman
 	createArgs := []string{
 		"create",
 		"--dns", "none",
+		"--env", fmt.Sprintf("TOOLBOX_PATH=%s", viper.GetString("TOOLBOX_CMD_PATH")),
 		"--group-add", sudoGroup,
 		"--hostname", "toolbox",
 		"--ipc", "host",
@@ -165,11 +182,62 @@ func create(cmd *cobra.Command, args []string) error {
 		"--userns=keep-id",
 		"--user", "root:root"}
 
-	logrus.Info("Checking if /etc/profile.d/toolbox.sh exists")
+	command := []string{"toolbox", "--verbose", "init-container",
+		"--home", viper.GetString("HOME"),
+		"--monitor-host",
+		"--shell", viper.GetString("SHELL"),
+		"--uid", userID,
+		"--user", viper.GetString("USER")}
+
+	logrus.Info("Checking if toolbox.sh profile exists")
 	if utils.FileExists("/etc/profile.d/toolbox.sh") {
-		logrus.Info("File /etc/profile.d/toolbox.sh exists")
+		logrus.Info("Found /etc/profile.d/toolbox.sh")
+
 		toolboxProfileBind = []string{"--volume", "/etc/profile.d/toolbox.sh:/etc/profile.d/toolbox.sh:ro"}
 		createArgs = append(createArgs, toolboxProfileBind...)
+	} else if utils.FileExists("/usr/share/profile.d/toolbox.sh") {
+		logrus.Info("Found /usr/share/profile.d/toolbox.sh")
+
+		toolboxProfileBind = []string{"--volume", "/usr/share/profile.d/toolbox.sh:/etc/profile.d/toolbox.sh:ro"}
+	} else {
+		logrus.Info("File 'toolbox.sh' does not exist in any known location")
+	}
+
+	if utils.FileExists("/media") {
+		logrus.Info("Checking if /media is a symbolic link to /run/media")
+
+		mediaPath, err := filepath.EvalSymlinks("/media")
+		if err != nil {
+			logrus.Error(err)
+		}
+
+		if mediaPath == "run/media" {
+			logrus.Info("/media is a symbolic link to /run/media")
+			command = append(command, "--media-link")
+		} else {
+			mediaBind := []string{"--volume", "/media:/media:rslave"}
+			createArgs = append(createArgs, mediaBind...)
+		}
+	}
+
+	logrus.Info("Checking if /mnt is a symbolic link to /var/mnt")
+
+	mntPath, err := filepath.EvalSymlinks("/mnt")
+	if err != nil {
+		logrus.Error(err)
+	}
+
+	if mntPath == "var/mnt" {
+		logrus.Info("/mnt is a symbolic link to /var/mnt")
+		command = append(command, "--mnt-link")
+	} else {
+		mntBind := []string{"--volume", "/mnt:/mnt:rslave"}
+		createArgs = append(createArgs, mntBind...)
+	}
+
+	if utils.FileExists("/run/media") {
+		runMediaBind := []string{"--volume", "/run/media:/run/media:rslave"}
+		createArgs = append(createArgs, runMediaBind...)
 	}
 
 	logrus.Info("Checking if /usr is mounted read-only or read-write")
@@ -178,15 +246,14 @@ func create(cmd *cobra.Command, args []string) error {
 		logrus.Error(err)
 		logrus.Fatal("Failed to get the mount-point of /usr")
 	}
-
-	logrus.Infof("Mount-point of /usr is %ss", usrMountPoint)
+	logrus.Infof("Mount-point of /usr is %s", usrMountPoint)
 	usrMountSourceFlags, err = utils.GetMountOptions(usrMountPoint)
 	if err != nil {
 		logrus.Error(err)
 		logrus.Fatalf("Failed to get the mount options of %s", usrMountPoint)
 	}
-
 	logrus.Infof("Mount flags of /usr on the host are %s", usrMountSourceFlags)
+
 	if !strings.Contains(usrMountSourceFlags, "ro") {
 		usrMountDestinationFlags = "rw"
 	}
@@ -247,6 +314,16 @@ func create(cmd *cobra.Command, args []string) error {
 	}
 	logrus.Infof("Canonicalized %s to %s", homeEnv, homeCanonical)
 
+	logrus.Info("Checking if /home is a symbolic link to /var/home")
+	homeSymPath, err := filepath.EvalSymlinks("/home")
+	if err != nil {
+		logrus.Error("Failed to evaluate if /home is a symbolic link")
+	}
+	if homeSymPath == "/var/home" {
+		logrus.Info("/home is a symbolic link to /var/home")
+		command = append(command, "--home-link")
+	}
+
 	conn, err := dbus.SessionBus()
 	if err != nil {
 		logrus.Error("Failed to connect to Session Bus")
@@ -269,19 +346,21 @@ func create(cmd *cobra.Command, args []string) error {
 	}
 
 	createArgs = append(createArgs, []string{
+		"--volume", "/usr/bin/toolbox:/usr/bin/toolbox:ro",
 		"--volume", fmt.Sprintf("%s:%s", viper.GetString("XDG_RUNTIME_DIR"), viper.GetString("XDG_RUNTIME_DIR")),
 		"--volume", fmt.Sprintf("%s/.flatpak-helper/monitor:/run/host/monitor", viper.GetString("XDG_RUNTIME_DIR")),
 		"--volume", fmt.Sprintf("%s:%s:rslave", homeCanonical, homeCanonical),
 		"--volume", "/etc:/run/host/etc",
 		"--volume", "/dev:/dev:rslave",
-		"--volume", "/media:/media:rslave",
-		"--volume", "/mnt:/mnt:rslave",
 		"--volume", "/run:/run/host/run:rslave",
 		"--volume", "/tmp:/run/host/tmp:rslave",
 		"--volume", fmt.Sprintf("/usr:/run/host/usr:%s,rslave", usrMountDestinationFlags),
 		"--volume", "/var:/run/host/var:rslave",
-		imageName,
-		"sleep", "99999999999"}...)
+		imageName}...)
+
+	createArgs = append(createArgs, command...)
+
+	logrus.Debug(createArgs)
 
 	output, err = utils.PodmanOutput(createArgs...)
 	if err != nil {
