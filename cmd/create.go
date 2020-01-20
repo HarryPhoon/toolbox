@@ -43,6 +43,30 @@ var (
 	usrMountSourceFlags      = ""
 	usrMountDestinationFlags = "ro"
 	dbusSystemBusAddress     = ""
+	preservedEnvVars         = []string{
+		"COLORTERM",
+		"COLUMNS",
+		"DBUS_SESSION_BUS_ADDRESS",
+		"DBUS_SYSTEM_BUS_ADDRESS",
+		"DESKTOP_SESSION",
+		"DISPLAY",
+		"LANG",
+		"LINES",
+		"SSH_AUTH_SOCK",
+		"TERM",
+		"USER",
+		"VTE_VERSION",
+		"WAYLAND_DISPLAY",
+		"XDG_CURRENT_DESKTOP",
+		"XDG_DATA_DIRS",
+		"XDG_MENU_PREFIX",
+		"XDG_RUNTIME_DIR",
+		"XDG_SEAT",
+		"XDG_SESSION_DESKTOP",
+		"XDG_SESSION_ID",
+		"XDG_SESSION_TYPE",
+		"XDG_VTNR",
+	}
 )
 
 var createCmd = &cobra.Command{
@@ -234,6 +258,14 @@ func create(cmd *cobra.Command, args []string) error {
 	call := SessionHelper.Call("org.freedesktop.Flatpak.SessionHelper.RequestSession", 0)
 	if call.Err != nil {
 		logrus.Fatal("Failed to call org.freedesktop.Flatpak.SessionHelper.RequestSession")
+	}
+
+	// Add the environment variables that hold a value
+	for _, env := range preservedEnvVars {
+		value := viper.GetString(env)
+		if len(value) != 0 {
+			createArgs = append(createArgs, fmt.Sprintf("--env=%s=%s", env, value))
+		}
 	}
 
 	createArgs = append(createArgs, []string{
