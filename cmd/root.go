@@ -18,6 +18,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 
@@ -43,6 +44,13 @@ developing and debugging software that runs fully unprivileged using Podman.`,
 			if err != nil {
 				return err
 			}
+
+			// Resolve the path to the toolbox binary
+			toolboxCmdPath, _ := filepath.Abs(os.Args[0])
+			viper.Set("TOOLBOX_CMD_PATH", toolboxCmdPath)
+
+			// Set the toolbox runtime directory
+			viper.Set("TOOLBOX_RUNTIME_DIRECTORY", fmt.Sprintf("%s/toolbox", viper.GetString("XDG_RUNTIME_DIR")))
 
 			// Here we could place some logic to take care of invoing toolbox or other commands from within container by piping them to the host
 			// FIXME
