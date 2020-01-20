@@ -178,7 +178,7 @@ func handleErrorCode(err error) error {
 		case 2:
 			return errors.New("Container is running")
 		case 125:
-			return errors.New("Failed to inspect container")
+			return errors.New("Internal Podman error")
 		default:
 			return err
 		}
