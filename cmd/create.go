@@ -65,41 +65,18 @@ func init() {
 }
 
 func create(cmd *cobra.Command, args []string) error {
-	// If an image name was not specified use the one that matches the system.
-	if len(createFlags.image) == 0 {
-		hostPlatform := utils.GetHostPlatform()
+	containerName := ""
 
-		if hostPlatform == "fedora" {
-			createFlags.image = "fedora-toolbox"
-		}
-
-		// If the system is unknown, use Fedora
-		createFlags.image = "fedora-toolbox"
-	}
-
-	// If no version is specified and the selected image is the same as host, use the host version ID
-	// In all other cases, use the latest stable version of each supported system
-	if len(createFlags.release) == 0 {
-		hostPlatform := utils.GetHostPlatform()
-		hostVersionID := utils.GetHostVersionID()
-		if hostPlatform == "fedora" && createFlags.image == "fedora-toolbox" {
-			if hostVersionID == "rawhide" {
-				createFlags.release = "32"
-			} else {
-				createFlags.release = utils.GetHostVersionID()
-			}
-		} else if createFlags.image == "fedora-toolbox" {
-			createFlags.release = "31"
-		}
-	}
-
-	// If no container name is specified then use the image name and it's version
-	var containerName string
 	if len(args) != 0 {
 		containerName = args[0]
-	} else {
-		containerName = createFlags.image + "-" + createFlags.release
+
+		if !utils.IsContainerNameValid(containerName) {
+			logrus.Fatal("Container names must match [a-zA-Z0-9][a-zA-Z0-9_.-]*")
+		}
 	}
+
+	// Toolbox should work even when some options are not specified. This is where the default values are defined.
+	containerName, imageName := utils.UpdateContainerAndImageNames(containerName, createFlags.image, createFlags.release)
 
 	logrus.Infof("Checking if container %s already exists", containerName)
 	containerList, err := utils.GetContainers("--all", "--filter", fmt.Sprintf("name=%s", containerName))
@@ -110,7 +87,6 @@ func create(cmd *cobra.Command, args []string) error {
 		logrus.Fatalf("Container %s already exists", containerName)
 	}
 
-	imageName := createFlags.image + ":" + createFlags.release
 	logrus.Infof("Used image will be: %s", imageName)
 
 	// Look for the toolbox image on local machine

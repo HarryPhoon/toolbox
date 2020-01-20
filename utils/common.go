@@ -12,6 +12,7 @@ import (
 
 	"github.com/shirou/gopsutil/host"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
 const (
@@ -108,8 +109,54 @@ func FileExists(path string) bool {
 	if _, err := os.Stat(path); err == nil {
 		return true
 	} else {
+// UpdateContainerAndImageNames takes care of standardizing names of containers and images.
+//
+// If no image name is specified then the base image will reflect the platform of the host (even the version).
+// If no container name is specified then the name of the image will be used.
+//
+// If the host system is unknown then the base image will be 'fedora-toolbox' with a default version
+func UpdateContainerAndImageNames(containerName string, imageName string, release string) (string, string) {
+	hostPlatform := GetHostPlatform()
+
+	if release == "" {
+		if hostPlatform == "fedora" {
+			release = GetHostVersionID()
+			if release == "rawhide" {
+				release = "32"
+			}
+		} else {
+			release = viper.GetString("RELEASE_DEFAULT")
+		}
+	}
+
+	if imageName == "" {
+		if hostPlatform == "fedora" {
+			imageName = fmt.Sprintf("fedora-toolbox:%s", release)
+		} else {
+			imageName = fmt.Sprintf("fedora-toolbox:%s", release)
+		}
+	}
+
+	// If no container name is specified then use the image name and it's version
+	if containerName == "" {
+		containerName = strings.ReplaceAll(imageName, ":", "-")
+	}
+
+	return containerName, imageName
+}
+
+// IsContainerNameValid checks if the name of a container matches the right pattern
+func IsContainerNameValid(containerName string) bool {
+	reg, err := regexp.Compile("^[a-zA-Z0-9][a-zA-Z0-9_.-]*")
+	if err != nil {
 		return false
 	}
+
+	if !reg.MatchString(containerName) {
+		return false
+	}
+
+	return true
 }
 
 // NumberPrompt creates an interactive prompt that expects and returns an integer
