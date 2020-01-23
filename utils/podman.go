@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"syscall"
@@ -12,6 +13,18 @@ import (
 
 	"github.com/sirupsen/logrus"
 )
+
+func IsPathBindMount(path string, containerInfo map[string]interface{}) bool {
+	containerMounts := containerInfo["Mounts"].([]interface{})
+	for _, mount := range containerMounts {
+		dest := fmt.Sprint(mount.(map[string]interface{})["Destination"])
+		if dest == path {
+			return true
+		}
+	}
+
+	return false
+}
 
 // CheckPodmanVersion compares provided version with the version of Podman.
 //
