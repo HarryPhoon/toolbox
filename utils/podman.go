@@ -43,6 +43,24 @@ func CheckPodmanVersion(requiredVersion string) bool {
 	return false
 }
 
+// PodmanInfo is a wrapper around `podman info` command
+func PodmanInfo() (map[string]interface{}, error) {
+	args := []string{"info", "--format", "json"}
+	output, err := PodmanOutput(args...)
+	if err != nil {
+		return nil, err
+	}
+
+	var podmanInfo map[string]interface{}
+
+	err = json.Unmarshal(output, &podmanInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	return podmanInfo, nil
+}
+
 // PodmanInspect is a wrapper around 'podman inspect' command
 //
 // Parameter 'typearg' takes in values 'container' or 'image' that is passed to the --type flag

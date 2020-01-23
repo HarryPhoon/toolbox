@@ -20,6 +20,19 @@ const (
 	idTruncLength = 12
 )
 
+// GetCgroupsVersion returns the cgroups version of the host
+//
+// The information is taken from the output of `podman info` command
+func GetCgroupsVersion() (string, error) {
+	podmanInfo, err := PodmanInfo()
+	if err != nil {
+		return "", err
+	}
+	cgroupVersion := fmt.Sprint(podmanInfo["host"].(map[string]interface{})["CgroupVersion"])
+
+	return cgroupVersion, nil
+}
+
 // GetHostPlatform returns the name of host system.
 //
 // Examples:
