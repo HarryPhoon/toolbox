@@ -103,7 +103,7 @@ func initConfig() {
 }
 
 func setUpLoggers() error {
-	logrus.SetOutput(os.Stdout)
+	logrus.SetOutput(os.Stderr)
 	logrus.SetFormatter(&logrus.TextFormatter{
 		DisableTimestamp:       true,
 		DisableLevelTruncation: true,
