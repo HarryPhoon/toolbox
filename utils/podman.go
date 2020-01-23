@@ -224,9 +224,22 @@ func PodmanRun(args ...string) error {
 
 	return nil
 }
+
+func PodmanInto(args ...string) error {
+	logLevel := fmt.Sprint(logrus.GetLevel())
+	args = append([]string{"--log-level", logLevel}, args...)
+	cmd := exec.Command("podman", args...)
+
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+
+	err := cmd.Run()
+
 	if err != nil {
 		return handleErrorCode(err)
 	}
+
 	return nil
 }
 
