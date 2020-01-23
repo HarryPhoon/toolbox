@@ -1,8 +1,10 @@
 package utils
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
+	"os"
 	"os/exec"
 	"syscall"
 
@@ -164,13 +166,24 @@ func ContainerExists(containerName string) bool {
 // If no problem while executing a command occurs, then the output of the command is returned in the first value.
 // If a problem occurs, then the error code is returned in the second value.
 func PodmanOutput(args ...string) ([]byte, error) {
+	logLevel := fmt.Sprint(logrus.GetLevel())
+	args = append([]string{"--log-level", logLevel}, args...)
 	cmd := exec.Command("podman", args...)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		logrus.Debug(string(output))
-		return nil, handleErrorCode(err)
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+	if logLevel == "debug" || logLevel == "trace" {
+		fmt.Fprint(os.Stderr, stderr.String())
 	}
-	return output, nil
+
+	if err != nil {
+		return stderr.Bytes(), handleErrorCode(err)
+	}
+
+	return stdout.Bytes(), nil
 }
 
 // PodmanRun is a wrapper around Podman that does not return the output of the invoked command.
@@ -180,8 +193,24 @@ func PodmanOutput(args ...string) ([]byte, error) {
 // If no problem while executing a command occurs, then the returned value is nil.
 // If a problem occurs, then the error code is returned.
 func PodmanRun(args ...string) error {
+	logLevel := fmt.Sprint(logrus.GetLevel())
+	args = append([]string{"--log-level", logLevel}, args...)
 	cmd := exec.Command("podman", args...)
+
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
 	err := cmd.Run()
+	if logLevel == "debug" || logLevel == "trace" {
+		fmt.Fprint(os.Stderr, stderr.String())
+	}
+
+	if err != nil {
+		return handleErrorCode(err)
+	}
+
+	return nil
+}
 	if err != nil {
 		return handleErrorCode(err)
 	}
