@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/containers/toolbox/utils"
 	"github.com/godbus/dbus/v5"
@@ -30,42 +31,109 @@ import (
 
 var (
 	runFlags struct {
-		containerName  string
-		releaseVersion string
+		containerName      string
+		releaseVersion     string
+		emitEscapeSequence bool
+		fallbackToBash     bool
+		promptForCreate    bool
+		pedantic           bool
 	}
 )
 
 var runCmd = &cobra.Command{
-	Use:   "run [container] [command...]",
+	Use:   "run [flags] CONTAINER [COMMAND [ARG...]]",
 	Short: "Run a command in an existing toolbox container",
 	Run: func(cmd *cobra.Command, args []string) {
-		run(cmd, args)
+		run(args)
 	},
-	Args: cobra.MinimumNArgs(2),
 }
 
 func init() {
 	rootCmd.AddCommand(runCmd)
 
 	flags := runCmd.Flags()
+	// This stops parsing of flags after arguments. Necessary to properly pass the command to the container
+	flags.SetInterspersed(false)
+
 	flags.StringVarP(&runFlags.releaseVersion, "release", "r", "", "Run command inside a toolbox container with the release version")
+	flags.BoolVar(&runFlags.emitEscapeSequence, "escape-sequence", false, "Emit an escape sequence for terminals")
+	flags.BoolVar(&runFlags.fallbackToBash, "fallback-to-bash", false, "If requested program does not exist, fallback to bash")
+	flags.BoolVar(&runFlags.promptForCreate, "prompt-for-create", true, "Offer to create a container if it does not exist")
+	flags.BoolVar(&runFlags.pedantic, "pedantic", true, "")
+
+	// These options dont have to be visible to an everyday user
+	flags.MarkHidden("fallback-to-bash")
+	flags.MarkHidden("escape-sequence")
+	flags.MarkHidden("prompt-for-create")
+	flags.MarkHidden("pedantic")
 }
 
-func run(cmd *cobra.Command, args []string) error {
-	containerName := args[0]
-	commands := args[1:]
-	imageName := ""
+func run(args []string) error {
+	var containerName string = ""
+	var imageName string = ""
+	var commands []string = nil
+
+	// When the release version is specified we want to use it over the container name
+	if runFlags.releaseVersion != "" {
+		commands = args[0:]
+	} else {
+		containerName = args[0]
+		commands = args[1:]
+	}
 
 	containerName, imageName = utils.UpdateContainerAndImageNames(containerName, imageName, runFlags.releaseVersion)
 
 	logrus.Debugf("Container: '%s' Image: '%s'", containerName, imageName)
 
-	// Check the existence of a container
 	logrus.Infof("Checking if container '%s' exists", containerName)
 	if !utils.ContainerExists(containerName) {
-		logrus.Fatalf("Container '%s' not found", containerName)
+		if !runFlags.pedantic {
+			logrus.Errorf("Container '%s' not found", containerName)
+			containers, err := GetContainers()
+			if err != nil {
+				logrus.Fatal("Error while fetching containers")
+			}
 
-		// FIXME: Here can be placed the offer to create a container
+			containersCount := len(containers)
+			logrus.Infof("Found %d containers", containersCount)
+
+			if containersCount == 0 {
+				createContainer := false
+
+				if rootFlags.assumeyes {
+					runFlags.promptForCreate = false
+					createContainer = true
+				}
+
+				if runFlags.promptForCreate {
+					var response string
+					for true {
+						fmt.Printf("No toolbox containers found. Create now? [y/N]: ")
+						fmt.Scanf("%s", &response)
+						response = strings.ToLower(response)
+
+						if response == "y" || response == "yes" {
+							createContainer = true
+						}
+
+						break
+					}
+				}
+
+				if !createContainer {
+					logrus.Fatal("A container can be created later with the 'create' command.")
+				}
+
+				create([]string{containerName})
+			} else if containersCount == 1 {
+				containerName = fmt.Sprint(containers[0]["Names"])
+				logrus.Infof("Entering container %s instead", containerName)
+			} else {
+				logrus.Fatal("Specify a name of a container")
+			}
+		} else {
+			logrus.Fatalf("Container '%s' not found", containerName)
+		}
 	}
 
 	// Prepare Flatpak session-helper
@@ -73,25 +141,23 @@ func run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		logrus.Error("Failed to connect to Session Bus")
 	}
-	defer conn.Close()
 
 	logrus.Info("Calling org.freedesktop.Flatpak.SessionHelper.RequestSession")
 	SessionHelper := conn.Object("org.freedesktop.Flatpak", "/org/freedesktop/Flatpak/SessionHelper")
 	call := SessionHelper.Call("org.freedesktop.Flatpak.SessionHelper.RequestSession", 0)
 	if call.Err != nil {
+		logrus.Debug(call.Err)
 		logrus.Fatal("Failed to call org.freedesktop.Flatpak.SessionHelper.RequestSession")
 	}
 
-	logrus.Infof("Inspecting container '%s'", containerName)
-	containerInfo, err := utils.PodmanInspect("container", containerName)
+	logrus.Infof("Starting container '%s'", containerName)
+	err = containerStart(containerName)
 	if err != nil {
 		logrus.Fatal(err)
 	}
 
-	logrus.Infof("Starting container '%s'", containerName)
-
-	err = containerStart(containerName)
-	// FIXME: This error handling shouldn't be left too general
+	logrus.Infof("Inspecting container '%s'", containerName)
+	containerInfo, err := utils.PodmanInspect("container", containerName)
 	if err != nil {
 		logrus.Fatal(err)
 	}
@@ -117,21 +183,41 @@ func run(cmd *cobra.Command, args []string) error {
 			logrus.Fatalf("Invalid entry point PID of container '%s'", containerName)
 		}
 
-		// TODO: Finish initialization of a container (need to ask Rishi about this)
+		// Wait for initialization of a container
+		containerInitializedStamp := fmt.Sprintf("%s/container-initialized-%d", viper.GetString("TOOLBOX_RUNTIME_DIRECTORY"), entryPointPID)
+		logrus.Infof("Checking if initialization stamp %s exists", containerInitializedStamp)
+		containerInitializedTimeout := 25
+		i := 0
+		for !utils.FileExists(containerInitializedStamp) {
+			time.Sleep(time.Second)
+			i++
+
+			if i == containerInitializedTimeout {
+				logrus.Fatalf("Failed to initialize container '%s'", containerName)
+			}
+		}
+		logrus.Infof("Container '%s' is properly initialized", containerName)
 	} else {
 		logrus.Warnf("Container '%s' uses deprecated features", containerName)
 		logrus.Warn("Consider recreating it with Toolbox version 0.0.17 or newer")
 	}
 
-	args = []string{"exec", "--user", "root:root", containerName, "touch", "/run/.toolboxenv"}
-	err = utils.PodmanRun(args...)
-	if err != nil {
-		logrus.Fatalf("Failed to create /run/.toolboxenv in container %s", containerName)
-	}
-
 	logrus.Infof("Looking for program '%s' in container %s", commands[0], containerName)
 
-	// TODO: Finish searching for a command in a container
+	args = []string{"exec",
+		"--user", viper.GetString("USER"),
+		containerName,
+		"sh", "-c", `command -v "$1"`, "sh", commands[0]}
+	err = utils.PodmanRun(args...)
+	if err != nil {
+		if runFlags.fallbackToBash {
+			logrus.Infof("%s not found in '%s'; using /bin/bash instead", commands[0], containerName)
+			commands = nil
+			commands = []string{"/bin/bash"}
+		} else {
+			logrus.Fatalf("%s not found in '%s'", commands[0], containerName)
+		}
+	}
 
 	logrus.Infof("Running in container '%s': %v", containerName, commands)
 
@@ -151,13 +237,27 @@ func run(cmd *cobra.Command, args []string) error {
 
 	args = append(args, []string{
 		containerName,
-		"capsh", "--caps=", "--", "-c"}...)
+		"capsh", "--caps=", "--", "-c", `exec "$@"`, "/bin/sh"}...)
 
 	args = append(args, commands...)
 
+	if runFlags.emitEscapeSequence {
+		fmt.Printf("\033]777;container;push;%s;toolbox\033\\", containerName)
+	}
+
 	err = utils.PodmanInto(args...)
+
+	if runFlags.emitEscapeSequence {
+		fmt.Print("\033]777;container;pop;;\033\\")
+	}
+
+	internalPodmanError := errors.New("exit status 125")
 	if err != nil {
-		logrus.Fatal(err)
+		logrus.Debug(err)
+		if errors.Is(err, internalPodmanError) {
+			logrus.Fatal("Internal Podman error")
+		}
+		logrus.Infof("There was an error while executing command '%s' in container '%s'", commands[0], containerName)
 	}
 
 	return nil
