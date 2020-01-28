@@ -16,34 +16,41 @@ limitations under the License.
 package cmd
 
 import (
-	"fmt"
-
+	"github.com/containers/toolbox/utils"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var (
 	enterFlags struct {
-		containerName string
-		releaseName   string
+		releaseVersion string
 	}
 )
 
 var enterCmd = &cobra.Command{
-	Use:   "enter",
+	Use:   "enter [flags] CONTAINER",
 	Short: "Enter a toolbox container for interactive use",
-	Run: func(cmd *cobra.Command, args []string) {
-		enter()
+	PreRun: func(cmd *cobra.Command, args []string) {
+		runFlags.fallbackToBash = true
+		runFlags.pedantic = false
+		runFlags.emitEscapeSequence = true
 	},
+	Run: func(cmd *cobra.Command, args []string) {
+		var containerName string = ""
+		if len(args) != 0 {
+			containerName = args[0]
+		}
+		containerName, _ = utils.UpdateContainerAndImageNames(containerName, "", enterFlags.releaseVersion)
+
+		args = []string{containerName, viper.GetString("SHELL")}
+		run(args)
+	},
+	Args: cobra.MaximumNArgs(1),
 }
 
 func init() {
 	rootCmd.AddCommand(enterCmd)
 
 	flags := enterCmd.Flags()
-	flags.StringVarP(&enterFlags.containerName, "container", "c", "", "Enter a toolbox container with the given name")
-	flags.StringVarP(&enterFlags.releaseName, "release", "r", "", "Enter a toolbox container with specified version")
-}
-
-func enter() {
-	fmt.Println("function 'enter'")
+	flags.StringVarP(&enterFlags.releaseVersion, "release", "r", "", "Run command inside a toolbox container with the release version")
 }
