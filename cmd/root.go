@@ -31,6 +31,7 @@ var (
 	cfgFile   string
 	rootFlags struct {
 		loglevel  string
+		logPodman bool
 		assumeyes bool
 	}
 	rootCmd = &cobra.Command{
@@ -74,6 +75,8 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&rootFlags.loglevel, "log-level", "warn", "Log messages above specified level: trace, debug, info, warn, error, fatal or panic")
 	rootCmd.Flags().BoolVarP(&rootFlags.assumeyes, "assumeyes", "y", false, "Automatically answer yes for all questions.")
+	rootCmd.PersistentFlags().BoolVar(&rootFlags.logPodman, "log-podman", false, "Show the log output of Podman")
+	viper.BindPFlag("log-podman", rootCmd.PersistentFlags().Lookup("log-podman"))
 }
 
 // initConfig reads in config file and ENV variables if set.

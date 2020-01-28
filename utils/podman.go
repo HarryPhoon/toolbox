@@ -3,15 +3,13 @@ package utils
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
-	"syscall"
 
 	"github.com/mcuadros/go-version"
-
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
 func IsPathBindMount(path string, containerInfo map[string]interface{}) bool {
@@ -180,7 +178,9 @@ func ContainerExists(containerName string) bool {
 // If a problem occurs, then the error code is returned in the second value.
 func PodmanOutput(args ...string) ([]byte, error) {
 	logLevel := fmt.Sprint(logrus.GetLevel())
-	args = append([]string{"--log-level", logLevel}, args...)
+	if viper.GetBool("log-podman") {
+		args = append([]string{"--log-level", logLevel}, args...)
+	}
 	cmd := exec.Command("podman", args...)
 
 	var stdout, stderr bytes.Buffer
@@ -193,7 +193,7 @@ func PodmanOutput(args ...string) ([]byte, error) {
 	}
 
 	if err != nil {
-		return stderr.Bytes(), handleErrorCode(err)
+		return stderr.Bytes(), err
 	}
 
 	return stdout.Bytes(), nil
@@ -207,7 +207,9 @@ func PodmanOutput(args ...string) ([]byte, error) {
 // If a problem occurs, then the error code is returned.
 func PodmanRun(args ...string) error {
 	logLevel := fmt.Sprint(logrus.GetLevel())
-	args = append([]string{"--log-level", logLevel}, args...)
+	if viper.GetBool("log-podman") {
+		args = append([]string{"--log-level", logLevel}, args...)
+	}
 	cmd := exec.Command("podman", args...)
 
 	var stderr bytes.Buffer
@@ -219,7 +221,7 @@ func PodmanRun(args ...string) error {
 	}
 
 	if err != nil {
-		return handleErrorCode(err)
+		return err
 	}
 
 	return nil
@@ -227,36 +229,23 @@ func PodmanRun(args ...string) error {
 
 func PodmanInto(args ...string) error {
 	logLevel := fmt.Sprint(logrus.GetLevel())
-	args = append([]string{"--log-level", logLevel}, args...)
+	if viper.GetBool("log-podman") {
+		args = append([]string{"--log-level", logLevel}, args...)
+	}
 	cmd := exec.Command("podman", args...)
 
 	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	// Seems like there is no need to pipe the command stderr to the system one by default
+	if viper.GetBool("log-podman") {
+		cmd.Stderr = os.Stderr
+	}
 	cmd.Stdin = os.Stdin
 
 	err := cmd.Run()
 
 	if err != nil {
-		return handleErrorCode(err)
+		return err
 	}
 
 	return nil
-}
-
-// FIXME: Handling exit codes globally is not really the best idea
-func handleErrorCode(err error) error {
-	if exitError, ok := err.(*exec.ExitError); ok {
-		ws := exitError.Sys().(syscall.WaitStatus)
-		switch ws.ExitStatus() {
-		case 1:
-			return errors.New("No such container/image")
-		case 2:
-			return errors.New("Container is running")
-		case 125:
-			return errors.New("Internal Podman error")
-		default:
-			return err
-		}
-	}
-	return err
 }
