@@ -58,7 +58,7 @@ func list(cmd *cobra.Command, args []string) error {
 	var err error
 
 	if listFlags.listImages {
-		images, err = getImages()
+		images, err = GetImages()
 		if err != nil {
 			logrus.Error(err)
 			logrus.Debugf("%+v", err)
@@ -66,7 +66,7 @@ func list(cmd *cobra.Command, args []string) error {
 	}
 
 	if listFlags.listContainers {
-		containers, err = getContainers()
+		containers, err = GetContainers()
 		if err != nil {
 			logrus.Error(err)
 			logrus.Debugf("%+v", err)
@@ -82,7 +82,7 @@ func list(cmd *cobra.Command, args []string) error {
 	return err
 }
 
-func getContainers() ([]map[string]interface{}, error) {
+func GetContainers() ([]map[string]interface{}, error) {
 	logrus.Info("Fetching containers with label=com.github.debarshiray.toolbox=true")
 	args := []string{"-a", "--filter", "label=com.github.debarshiray.toolbox=true"}
 	Dcontainers, err := utils.GetContainers(args...)
@@ -104,7 +104,7 @@ func getContainers() ([]map[string]interface{}, error) {
 	return containers, err
 }
 
-func getImages() ([]map[string]interface{}, error) {
+func GetImages() ([]map[string]interface{}, error) {
 	logrus.Info("Fetching images with label=com.github.debarshiray.toolbox=true")
 	args := []string{"--filter", "label=com.github.debarshiray.toolbox=true"}
 	Dimages, err := utils.GetImages(args...)
