@@ -74,12 +74,15 @@ func GetGroupForSudo() string {
 
 // GetMountPoint returns the mount point of a target.
 func GetMountPoint(target string) (string, error) {
-	cmd := exec.Command("findmnt", "--noheadings", "--output", "TARGET", target)
+	cmd := exec.Command("df", "--output=target", target)
 	output, err := cmd.Output()
 	if err != nil {
 		return "", err
 	}
-	return strings.Trim(string(output), "\n"), nil
+
+	options := strings.SplitAfter(string(output), "\n")
+
+	return strings.Trim(string(options[1]), "\n"), nil
 }
 
 // GetMountOptions returns the mount options of a target.
@@ -89,7 +92,10 @@ func GetMountOptions(target string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return strings.Trim(string(output), "\n"), nil
+
+	options := strings.SplitAfter(string(output), "\n")
+
+	return strings.Trim(options[0], "\n"), nil
 }
 
 // GetUID returns the user ID
