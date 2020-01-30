@@ -61,12 +61,12 @@ func GetHostVersionID() string {
 
 // GetGroupForSudo returns the name of the sudoers group.
 //
-// Some distro call it 'sudo' (eg. Ubuntu) and some call it 'wheel' (eg. Fedora).
+// Some distros call it 'sudo' (eg. Ubuntu) and some call it 'wheel' (eg. Fedora).
 func GetGroupForSudo() string {
 	group := ""
-	if _, err := user.LookupGroup("sudo"); err != nil {
+	if _, err := user.LookupGroup("sudo"); err == nil {
 		group = "sudo"
-	} else if _, err := user.LookupGroup("wheel"); err != nil {
+	} else if _, err := user.LookupGroup("wheel"); err == nil {
 		group = "wheel"
 	}
 	return group
