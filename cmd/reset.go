@@ -31,5 +31,5 @@ var resetCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(resetCmd)
-
+	resetCmd.Hidden = true
 }
