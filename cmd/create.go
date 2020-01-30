@@ -16,7 +16,10 @@ limitations under the License.
 package cmd
 
 import (
+	"bufio"
 	"fmt"
+	"os"
+	"os/exec"
 	"os/user"
 	"path/filepath"
 	"strings"
@@ -182,12 +185,51 @@ func create(args []string) error {
 		"--userns=keep-id",
 		"--user", "root:root"}
 
-	command := []string{"toolbox", "--verbose", "init-container",
+	// Check which version of toolbox (shell or golang) is the system default (according to PATH).
+	// The command used as an entry point is called differently and accept a bit different flags.
+	logrus.Info("Checking what implementation of Toolbox is the system default")
+	var command []string
+	toolboxPath, err := exec.LookPath("toolbox")
+	if err != nil {
+		logrus.Debug(err)
+		logrus.Info("Could not resolve path to command 'toolbox'; 'toolbox' is probably not in the PATH")
+		logrus.Warn("Toolbox was not found in PATH. The container will use this binary as the entry point")
+		toolboxPath, err = filepath.Abs(os.Args[0])
+		if err != nil {
+			logrus.Debug(err)
+			logrus.Fatalf("Could not find absolute path to '%s'", os.Args[0])
+		}
+	}
+
+	logrus.Infof("System default Toolbox is %s", toolboxPath)
+
+	f, err := os.Open(toolboxPath)
+	if err != nil {
+		logrus.Debug(err)
+		logrus.Fatalf("Could not open file %s", toolboxPath)
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	if scanner.Scan() {
+		// Check if on the first line is present call to the 'sh' binary (shebang)
+		if strings.Contains(scanner.Text(), "/sh") {
+			logrus.Info("The used implementation is in shell")
+			command = []string{"toolbox", "--verbose", "init-container"}
+		} else {
+			logrus.Info("The used implementation is in go")
+			command = []string{"toolbox", "--log-level", "debug", "initContainer"}
+		}
+	} else {
+		logrus.Fatalf("Could not read from file %s", toolboxPath)
+	}
+
+	command = append(command, []string{
 		"--home", viper.GetString("HOME"),
 		"--monitor-host",
 		"--shell", viper.GetString("SHELL"),
 		"--uid", userID,
-		"--user", viper.GetString("USER")}
+		"--user", viper.GetString("USER")}...)
 
 	logrus.Info("Checking if toolbox.sh profile exists")
 	if utils.PathExists("/etc/profile.d/toolbox.sh") {
@@ -346,7 +388,7 @@ func create(args []string) error {
 	}
 
 	createArgs = append(createArgs, []string{
-		"--volume", "/usr/bin/toolbox:/usr/bin/toolbox:ro",
+		"--volume", fmt.Sprintf("%s:/usr/bin/toolbox:ro", toolboxPath),
 		"--volume", fmt.Sprintf("%s:%s", viper.GetString("XDG_RUNTIME_DIR"), viper.GetString("XDG_RUNTIME_DIR")),
 		"--volume", fmt.Sprintf("%s/.flatpak-helper/monitor:/run/host/monitor", viper.GetString("XDG_RUNTIME_DIR")),
 		"--volume", fmt.Sprintf("%s:%s:rslave", homeCanonical, homeCanonical),
@@ -360,6 +402,7 @@ func create(args []string) error {
 
 	createArgs = append(createArgs, command...)
 
+	logrus.Infof("Trying to create container %s", containerName)
 	logrus.Debug(createArgs)
 
 	output, err = utils.PodmanOutput(createArgs...)
