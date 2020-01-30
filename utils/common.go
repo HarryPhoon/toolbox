@@ -139,9 +139,9 @@ func ReferenceHasDomain(text string) bool {
 	return true
 }
 
-// FileExists wraps around os.Stat providing a nice interface for checking an existence of a file given by parameter path.
-func FileExists(path string) bool {
-	if _, err := os.Stat(path); err == nil {
+// PathExists wraps around os.Stat providing a nice interface for checking an existence of a path.
+func PathExists(path string) bool {
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		return true
 	}
 	return false

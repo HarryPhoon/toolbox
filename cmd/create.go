@@ -190,12 +190,12 @@ func create(args []string) error {
 		"--user", viper.GetString("USER")}
 
 	logrus.Info("Checking if toolbox.sh profile exists")
-	if utils.FileExists("/etc/profile.d/toolbox.sh") {
+	if utils.PathExists("/etc/profile.d/toolbox.sh") {
 		logrus.Info("Found /etc/profile.d/toolbox.sh")
 
 		toolboxProfileBind = []string{"--volume", "/etc/profile.d/toolbox.sh:/etc/profile.d/toolbox.sh:ro"}
 		createArgs = append(createArgs, toolboxProfileBind...)
-	} else if utils.FileExists("/usr/share/profile.d/toolbox.sh") {
+	} else if utils.PathExists("/usr/share/profile.d/toolbox.sh") {
 		logrus.Info("Found /usr/share/profile.d/toolbox.sh")
 
 		toolboxProfileBind = []string{"--volume", "/usr/share/profile.d/toolbox.sh:/etc/profile.d/toolbox.sh:ro"}
@@ -203,7 +203,7 @@ func create(args []string) error {
 		logrus.Info("File 'toolbox.sh' does not exist in any known location")
 	}
 
-	if utils.FileExists("/media") {
+	if utils.PathExists("/media") {
 		logrus.Info("Checking if /media is a symbolic link to /run/media")
 
 		mediaPath, err := filepath.EvalSymlinks("/media")
@@ -235,7 +235,7 @@ func create(args []string) error {
 		createArgs = append(createArgs, mntBind...)
 	}
 
-	if utils.FileExists("/run/media") {
+	if utils.PathExists("/run/media") {
 		runMediaBind := []string{"--volume", "/run/media:/run/media:rslave"}
 		createArgs = append(createArgs, runMediaBind...)
 	}

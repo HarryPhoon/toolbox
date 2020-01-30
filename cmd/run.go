@@ -188,7 +188,7 @@ func run(args []string) error {
 		logrus.Infof("Checking if initialization stamp %s exists", containerInitializedStamp)
 		containerInitializedTimeout := 25
 		i := 0
-		for !utils.FileExists(containerInitializedStamp) {
+		for !utils.PathExists(containerInitializedStamp) {
 			time.Sleep(time.Second)
 			i++
 
