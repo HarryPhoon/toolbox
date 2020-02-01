@@ -1581,6 +1581,14 @@ run()
         fi
     fi
 
+    if ! $podman_command exec \
+                 --user "$USER" \
+                 "$toolbox_container" \
+                 sh -c "test -d $PWD" >/dev/null 2>&3; then
+        echo "Directory $PWD does not exist in container $toolbox_container, try cd && !!" >&2
+        exit 127
+    fi
+
     echo "$base_toolbox_command: running in container $toolbox_container:" >&3
     echo "$base_toolbox_command: $program" >&3
     for i in "$@"; do

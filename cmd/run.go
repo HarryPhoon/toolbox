@@ -220,6 +220,16 @@ func run(args []string) error {
 		logrus.Warn("Consider recreating it with Toolbox version 0.0.17 or newer")
 	}
 
+	logrus.Info("Checking if the current working directory is in the container")
+	args = []string{"exec",
+		"--user", viper.GetString("USER"),
+		containerName,
+		"sh", "-c", fmt.Sprintf("test -d %s", viper.GetString("PWD"))}
+	err = podman.CmdRun(args...)
+	if err != nil {
+		logrus.Fatalf("Directory '%s' does not exist in container '%s', try running 'cd && !!'", viper.GetString("PWD"), containerName)
+	}
+
 	logrus.Infof("Looking for program '%s' in container %s", commands[0], containerName)
 
 	args = []string{"exec",
