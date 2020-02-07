@@ -40,6 +40,28 @@ This will create a container called `fedora-toolbox-<version-id>`.
 [user@hostname ~]$ toolbox enter
 ⬢[user@toolbox ~]$
 ```
+## How to build
+To build the project you need to have [Go](https://golang.org/) installed on your system and have it [configured](https://golang.org/doc/install).
+
+**To build Toolbox:**
+```
+git clone git@github.com:containers/toolbox.git / https://github.com/containers/toolbox.git
+cd toolbox
+go build
+```
+That's it! Go should pull and build all the necessarry dependencies and build the binary.
+
+**To install Toolbox:**
+```
+go install
+```
+Installation using Go moves the binary made by `go build` to GOBIN which can be configured to be part of PATH. More about GOBIN is [here](https://golang.org/cmd/go/#hdr-Compile_and_install_packages_and_dependencies)
+
+**To uninstall Toolbox:**
+```
+go clean
+```
+This only removes the `toolbox` binary from GOBIN. This method does not apply to Toolbox from a package.
 
 ## Goals and Use Cases
 
