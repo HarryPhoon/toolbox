@@ -120,10 +120,23 @@ func create(args []string) error {
 	imageFound := findLocalToolboxImage(imageName)
 
 	if !imageFound {
-		logrus.Fatalf("Image '%s' was not found", imageName)
+		logrus.Infof("Image '%s' was not found", imageName)
 
-		// TODO: Try to pull the image from a faraway universe
-		// At the same time check if it is a Toolbox image before pulling it
+		response := ""
+		fmt.Printf("Do you want to download image %s (+-200MB)? [y/N]: ", imageName)
+		fmt.Scanf("%s", &response)
+		response = strings.ToLower(response)
+
+		if response == "y" || response == "yes" {
+			imagePulled := podman.PullImage(imageName)
+			if !imagePulled {
+				logrus.Fatal("Failed to pull image")
+			}
+		} else {
+			return nil
+		}
+
+		logrus.Infof("Image '%s was pulled", imageName)
 	} else {
 		logrus.Infof("Image '%s' was found", imageName)
 	}

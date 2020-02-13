@@ -170,6 +170,29 @@ func ContainerExists(containerName string) bool {
 	return true
 }
 
+// PullImage pulls an image
+func PullImage(imageName string) bool {
+	args := []string{"pull", imageName}
+
+	logLevel := fmt.Sprint(logrus.GetLevel())
+	if viper.GetBool("log-podman") {
+		args = append([]string{"--log-level", logLevel}, args...)
+	}
+
+	cmd := exec.Command("podman", args...)
+
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+
+	err := cmd.Run()
+	if err != nil {
+		return false
+	}
+
+	return true
+}
+
 // PodmanOutput is a wrapper around Podman that returns the output of the invoked command.
 //
 // Parameter args accepts an array of strings to be passed to Podman.
