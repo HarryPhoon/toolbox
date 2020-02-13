@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/containers/toolbox/pkg/podman"
 	"github.com/shirou/gopsutil/host"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -24,7 +25,7 @@ const (
 //
 // The information is taken from the output of `podman info` command
 func GetCgroupsVersion() (string, error) {
-	podmanInfo, err := PodmanInfo()
+	podmanInfo, err := podman.PodmanInfo()
 	if err != nil {
 		return "", err
 	}

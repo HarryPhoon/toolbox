@@ -21,7 +21,8 @@ import (
 	"os"
 	"text/tabwriter"
 
-	"github.com/containers/toolbox/utils"
+	"github.com/containers/toolbox/pkg/podman"
+	"github.com/containers/toolbox/pkg/utils"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -85,7 +86,7 @@ func list(cmd *cobra.Command, args []string) error {
 func GetContainers() ([]map[string]interface{}, error) {
 	logrus.Info("Fetching containers with label=com.github.debarshiray.toolbox=true")
 	args := []string{"-a", "--filter", "label=com.github.debarshiray.toolbox=true"}
-	Dcontainers, err := utils.GetContainers(args...)
+	Dcontainers, err := podman.GetContainers(args...)
 	if err != nil {
 		err = errors.New("Fetching of containers with com.github.debarshiray.toolbox=true failed")
 		logrus.Error(err)
@@ -93,7 +94,7 @@ func GetContainers() ([]map[string]interface{}, error) {
 
 	logrus.Info("Fetching containers with label=com.github.containers.toolbox=true")
 	args = []string{"-a", "--filter", "label=com.github.containers.toolbox=true"}
-	Ccontainers, err := utils.GetContainers(args...)
+	Ccontainers, err := podman.GetContainers(args...)
 	if err != nil {
 		err = errors.New("Fetching of containers with com.github.containers.toolbox=true failed")
 		logrus.Error(err)
@@ -107,14 +108,14 @@ func GetContainers() ([]map[string]interface{}, error) {
 func GetImages() ([]map[string]interface{}, error) {
 	logrus.Info("Fetching images with label=com.github.debarshiray.toolbox=true")
 	args := []string{"--filter", "label=com.github.debarshiray.toolbox=true"}
-	Dimages, err := utils.GetImages(args...)
+	Dimages, err := podman.GetImages(args...)
 	if err != nil {
 		logrus.Error(err)
 	}
 
 	logrus.Info("Fetching images with label=com.github.containers.toolbox=true")
 	args = []string{"--filter", "label=com.github.containers.toolbox=true"}
-	Cimages, err := utils.GetImages(args...)
+	Cimages, err := podman.GetImages(args...)
 	if err != nil {
 		logrus.Error(err)
 	}

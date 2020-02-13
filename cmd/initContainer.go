@@ -22,7 +22,7 @@ import (
 	"os/user"
 	"time"
 
-	"github.com/containers/toolbox/utils"
+	"github.com/containers/toolbox/pkg/utils"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"

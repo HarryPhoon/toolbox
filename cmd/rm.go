@@ -19,7 +19,8 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/containers/toolbox/utils"
+	"github.com/containers/toolbox/pkg/podman"
+	"github.com/containers/toolbox/pkg/utils"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -51,14 +52,14 @@ func rm(args []string) error {
 	if rmFlags.deleteAll {
 		logrus.Info("Fetching containers with label=com.github.debarshiray.toolbox=true")
 		args := []string{"--filter", "label=com.github.debarshiray.toolbox=true"}
-		Dcontainers, err := utils.GetContainers(args...)
+		Dcontainers, err := podman.GetContainers(args...)
 		if err != nil {
 			logrus.Fatal(err)
 		}
 
 		logrus.Info("Fetching containers with label=com.github.containers.toolbox=true")
 		args = []string{"--filter", "label=com.github.containers.toolbox=true"}
-		Ccontainers, err := utils.GetContainers(args...)
+		Ccontainers, err := podman.GetContainers(args...)
 		if err != nil {
 			logrus.Fatal(err)
 		}
@@ -83,7 +84,7 @@ func rm(args []string) error {
 			// Check if the container exists
 			logrus.Infof("Inspecting container %s", containerName)
 			args := []string{"inspect", "--format", "json", "--type", "container", containerName}
-			output, err := utils.PodmanOutput(args...)
+			output, err := podman.CmdOutput(args...)
 			if err != nil {
 				if errors.As(err, &ErrPodmanInternal) {
 					logrus.Fatalf("Container %s does not exist", containerName)
@@ -124,7 +125,7 @@ func removeContainer(containerName string) error {
 	if rmFlags.forceDelete {
 		args = append(args, "--force")
 	}
-	err := utils.PodmanRun(args...)
+	err := podman.CmdRun(args...)
 	if err != nil {
 		return err
 	}

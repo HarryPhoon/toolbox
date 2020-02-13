@@ -16,7 +16,7 @@ limitations under the License.
 package cmd
 
 import (
-	"github.com/containers/toolbox/utils"
+	"github.com/containers/toolbox/pkg/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
