@@ -18,7 +18,8 @@ package cmd
 import (
 	"encoding/json"
 
-	"github.com/containers/toolbox/utils"
+	"github.com/containers/toolbox/pkg/podman"
+	"github.com/containers/toolbox/pkg/utils"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -50,14 +51,14 @@ func rmi(args []string) {
 	if rmiFlags.deleteAll {
 		logrus.Info("Fetching images with label=com.github.debarshiray.toolbox=true")
 		args := []string{"--filter", "label=com.github.debarshiray.toolbox=true"}
-		Dimages, err := utils.GetImages(args...)
+		Dimages, err := podman.GetImages(args...)
 		if err != nil {
 			logrus.Fatal(err)
 		}
 
 		logrus.Info("Fetching images with label=com.github.containers.toolbox=true")
 		args = []string{"--filter", "label=com.github.containers.toolbox=true"}
-		Cimages, err := utils.GetImages(args...)
+		Cimages, err := podman.GetImages(args...)
 		if err != nil {
 			logrus.Fatal(err)
 		}
@@ -79,7 +80,7 @@ func rmi(args []string) {
 			// Check if the container exists
 			logrus.Infof("Inspecting image %s", imageID)
 			args := []string{"inspect", "--format", "json", "--type", "image", imageID}
-			output, err := utils.PodmanOutput(args...)
+			output, err := podman.CmdOutput(args...)
 			if err != nil {
 				logrus.Fatal(err)
 			}
@@ -116,7 +117,7 @@ func removeImage(image string) error {
 	if rmiFlags.forceDelete {
 		args = append(args, "--force")
 	}
-	err := utils.PodmanRun(args...)
+	err := podman.CmdRun(args...)
 	if err != nil {
 		logrus.Error(err)
 	}

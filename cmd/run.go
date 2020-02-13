@@ -22,7 +22,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/containers/toolbox/utils"
+	"github.com/containers/toolbox/pkg/podman"
+	"github.com/containers/toolbox/pkg/utils"
 	"github.com/godbus/dbus/v5"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -86,7 +87,7 @@ func run(args []string) error {
 	logrus.Debugf("Container: '%s' Image: '%s'", containerName, imageName)
 
 	logrus.Infof("Checking if container '%s' exists", containerName)
-	if !utils.ContainerExists(containerName) {
+	if !podman.ContainerExists(containerName) {
 		if !runFlags.pedantic {
 			logrus.Errorf("Container '%s' not found", containerName)
 			containers, err := GetContainers()
@@ -157,7 +158,7 @@ func run(args []string) error {
 	}
 
 	logrus.Infof("Inspecting container '%s'", containerName)
-	containerInfo, err := utils.PodmanInspect("container", containerName)
+	containerInfo, err := podman.PodmanInspect("container", containerName)
 	if err != nil {
 		logrus.Fatal(err)
 	}
@@ -208,7 +209,7 @@ func run(args []string) error {
 		"--user", viper.GetString("USER"),
 		containerName,
 		"sh", "-c", `command -v "$1"`, "sh", commands[0]}
-	err = utils.PodmanRun(args...)
+	err = podman.CmdRun(args...)
 	if err != nil {
 		if runFlags.fallbackToBash {
 			logrus.Infof("%s not found in '%s'; using /bin/bash instead", commands[0], containerName)
@@ -245,7 +246,7 @@ func run(args []string) error {
 		fmt.Printf("\033]777;container;push;%s;toolbox\033\\", containerName)
 	}
 
-	err = utils.PodmanInto(args...)
+	err = podman.CmdInto(args...)
 
 	if runFlags.emitEscapeSequence {
 		fmt.Print("\033]777;container;pop;;\033\\")
@@ -265,12 +266,12 @@ func run(args []string) error {
 
 func containerStart(containerName string) error {
 	args := []string{"start", containerName}
-	output, err := utils.PodmanOutput(args...)
+	output, err := podman.CmdOutput(args...)
 	if err != nil {
 		if strings.Contains(string(output), "use system migrate to mitigate") {
 			logrus.Info("Checking if 'podman system migrate' support '--new-runtime' option")
 
-			if utils.CheckPodmanVersion("1.6.2") {
+			if podman.CheckPodmanVersion("1.6.2") {
 				return errors.New("Podman doesn't support --new-runtime option")
 			}
 
@@ -286,12 +287,12 @@ func containerStart(containerName string) error {
 
 			logrus.Infof("Migrating containers to OCI runtime %s", ociRuntimeRequired)
 
-			err = utils.PodmanRun("system", "migrate", "--new-runtime", ociRuntimeRequired)
+			err = podman.CmdRun("system", "migrate", "--new-runtime", ociRuntimeRequired)
 			if err != nil {
 				return fmt.Errorf("Failed to migrate containers to OCI runtime '%s'", ociRuntimeRequired)
 			}
 
-			err = utils.PodmanRun("start", containerName)
+			err = podman.CmdRun("start", containerName)
 			if err != nil {
 				return fmt.Errorf("Container '%s' doesn't support cgroups %s", containerName, cgroupVersion)
 			}

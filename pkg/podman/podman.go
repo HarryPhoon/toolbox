@@ -1,4 +1,4 @@
-package utils
+package podman
 
 import (
 	"bytes"
@@ -32,7 +32,7 @@ func IsPathBindMount(path string, containerInfo map[string]interface{}) bool {
 // Returns false if Podman version is not sufficient.
 func CheckPodmanVersion(requiredVersion string) bool {
 	args := []string{"version", "-f", "json"}
-	output, err := PodmanOutput(args...)
+	output, err := CmdOutput(args...)
 	if err != nil {
 		logrus.Error(err)
 		return false
@@ -59,7 +59,7 @@ func CheckPodmanVersion(requiredVersion string) bool {
 // PodmanInfo is a wrapper around `podman info` command
 func PodmanInfo() (map[string]interface{}, error) {
 	args := []string{"info", "--format", "json"}
-	output, err := PodmanOutput(args...)
+	output, err := CmdOutput(args...)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func PodmanInfo() (map[string]interface{}, error) {
 // Parameter 'typearg' takes in values 'container' or 'image' that is passed to the --type flag
 func PodmanInspect(typearg string, target string) (map[string]interface{}, error) {
 	args := []string{"inspect", "--format", "json", "--type", typearg, target}
-	output, err := PodmanOutput(args...)
+	output, err := CmdOutput(args...)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +103,7 @@ func PodmanInspect(typearg string, target string) (map[string]interface{}, error
 // If a problem happens during execution, first argument is nil and second argument holds the error message.
 func GetContainers(args ...string) ([]map[string]interface{}, error) {
 	args = append([]string{"ps", "--format", "json"}, args...)
-	output, err := PodmanOutput(args...)
+	output, err := CmdOutput(args...)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +127,7 @@ func GetContainers(args ...string) ([]map[string]interface{}, error) {
 // If a problem happens during execution, first argument is nil and second argument holds the error message.
 func GetImages(args ...string) ([]map[string]interface{}, error) {
 	args = append([]string{"images", "--format", "json"}, args...)
-	output, err := PodmanOutput(args...)
+	output, err := CmdOutput(args...)
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +148,7 @@ func GetImages(args ...string) ([]map[string]interface{}, error) {
 func ImageExists(image string) bool {
 	args := []string{"image", "exists", image}
 
-	err := PodmanRun(args...)
+	err := CmdRun(args...)
 	if err != nil {
 		return false
 	}
@@ -162,7 +162,7 @@ func ImageExists(image string) bool {
 func ContainerExists(containerName string) bool {
 	args := []string{"container", "exists", containerName}
 
-	err := PodmanRun(args...)
+	err := CmdRun(args...)
 	if err != nil {
 		return false
 	}
@@ -193,13 +193,13 @@ func PullImage(imageName string) bool {
 	return true
 }
 
-// PodmanOutput is a wrapper around Podman that returns the output of the invoked command.
+// CmdOutput is a wrapper around Podman that returns the output of the invoked command.
 //
 // Parameter args accepts an array of strings to be passed to Podman.
 //
 // If no problem while executing a command occurs, then the output of the command is returned in the first value.
 // If a problem occurs, then the error code is returned in the second value.
-func PodmanOutput(args ...string) ([]byte, error) {
+func CmdOutput(args ...string) ([]byte, error) {
 	logLevel := fmt.Sprint(logrus.GetLevel())
 	if viper.GetBool("log-podman") {
 		args = append([]string{"--log-level", logLevel}, args...)
@@ -222,13 +222,13 @@ func PodmanOutput(args ...string) ([]byte, error) {
 	return stdout.Bytes(), nil
 }
 
-// PodmanRun is a wrapper around Podman that does not return the output of the invoked command.
+// CmdRun is a wrapper around Podman that does not return the output of the invoked command.
 //
 // Parameter args accepts an array of strings to be passed to Podman.
 //
 // If no problem while executing a command occurs, then the returned value is nil.
 // If a problem occurs, then the error code is returned.
-func PodmanRun(args ...string) error {
+func CmdRun(args ...string) error {
 	logLevel := fmt.Sprint(logrus.GetLevel())
 	if viper.GetBool("log-podman") {
 		args = append([]string{"--log-level", logLevel}, args...)
@@ -250,7 +250,7 @@ func PodmanRun(args ...string) error {
 	return nil
 }
 
-func PodmanInto(args ...string) error {
+func CmdInto(args ...string) error {
 	logLevel := fmt.Sprint(logrus.GetLevel())
 	if viper.GetBool("log-podman") {
 		args = append([]string{"--log-level", logLevel}, args...)

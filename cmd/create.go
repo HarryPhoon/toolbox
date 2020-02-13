@@ -24,7 +24,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/containers/toolbox/utils"
+	"github.com/containers/toolbox/pkg/podman"
+	"github.com/containers/toolbox/pkg/utils"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/sirupsen/logrus"
@@ -110,7 +111,7 @@ func create(args []string) error {
 	containerName, imageName := utils.UpdateContainerAndImageNames(containerName, createFlags.image, createFlags.release)
 
 	logrus.Infof("Checking if container %s already exists", containerName)
-	if utils.ContainerExists(containerName) {
+	if podman.ContainerExists(containerName) {
 		logrus.Fatalf("Container %s already exists", containerName)
 	}
 
@@ -144,7 +145,7 @@ func create(args []string) error {
 	// If the image was not pulled that check if it is a Toolbox image
 	if imageFound {
 		logrus.Infof("Checking if '%s' is a Toolbox image", imageName)
-		inspectInfo, err := utils.PodmanInspect("image", imageName)
+		inspectInfo, err := podman.PodmanInspect("image", imageName)
 		if err != nil {
 			logrus.Fatalf("Unable to inspect image '%s'", imageName)
 		}
@@ -355,7 +356,7 @@ func create(args []string) error {
 	}
 
 	logrus.Info("Checking if 'podman create' supports option '--ulimit host'")
-	if utils.CheckPodmanVersion("1.5.0") {
+	if podman.CheckPodmanVersion("1.5.0") {
 		logrus.Info("Option '--ulimit host' is supported")
 		ulimitHost = []string{"--ulimit", "host"}
 	} else {
@@ -418,7 +419,7 @@ func create(args []string) error {
 	logrus.Infof("Trying to create container %s", containerName)
 	logrus.Debug(createArgs)
 
-	output, err = utils.PodmanOutput(createArgs...)
+	output, err = podman.CmdOutput(createArgs...)
 	if err != nil {
 		logrus.Fatalf("Failed to create container %s", containerName)
 	}
@@ -429,14 +430,14 @@ func create(args []string) error {
 func findLocalToolboxImage(imageName string) bool {
 	logrus.Info("Looking for the image locally")
 
-	if utils.ImageExists(imageName) {
+	if podman.ImageExists(imageName) {
 		return true
 	}
 
 	if utils.ReferenceCanBeID(imageName) {
 		logrus.Infof("Looking for image %s", imageName)
 
-		if utils.ImageExists(imageName) {
+		if podman.ImageExists(imageName) {
 			return true
 		}
 	}
@@ -447,7 +448,7 @@ func findLocalToolboxImage(imageName string) bool {
 		imageName = "localhost/" + imageName
 		logrus.Infof("Looking for image %s", imageName)
 
-		if utils.ImageExists(imageName) {
+		if podman.ImageExists(imageName) {
 			return true
 		}
 	}
