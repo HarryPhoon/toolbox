@@ -169,15 +169,16 @@ func UpdateContainerAndImageNames(containerName string, imageName string, releas
 
 	if imageName == "" {
 		if hostPlatform == "fedora" {
-			imageName = fmt.Sprintf("fedora-toolbox:%s", release)
+			imageName = fmt.Sprintf("f%s/fedora-toolbox:%s", release, release)
 		} else {
-			imageName = fmt.Sprintf("fedora-toolbox:%s", release)
+			imageName = fmt.Sprintf("f%s/fedora-toolbox:%s", release, release)
 		}
 	}
 
 	// If no container name is specified then use the image name and it's version
 	if containerName == "" {
 		containerName = strings.ReplaceAll(imageName, ":", "-")
+		containerName = strings.Split(containerName, "/")[1]
 	}
 
 	return containerName, imageName
