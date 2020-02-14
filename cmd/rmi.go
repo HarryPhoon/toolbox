@@ -17,6 +17,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"errors"
 
 	"github.com/containers/toolbox/pkg/podman"
 	"github.com/containers/toolbox/pkg/utils"
@@ -68,7 +69,13 @@ func rmi(args []string) {
 			logrus.Infof("Deleting image %s", image["id"].(string))
 			err = removeImage(image["id"].(string))
 			if err != nil {
-				logrus.Error(err)
+				if errors.As(err, &podman.ErrHasChildren) {
+					logrus.Errorf("Image '%s' has dependent children", image["id"])
+				}
+				if errors.As(err, &podman.ErrNonExistent) {
+					logrus.Errorf("Image '%s' does not exist", image["id"].(string))
+				}
+				logrus.Error("Internal Podman error: %w", err)
 			}
 		}
 	} else {
@@ -82,6 +89,9 @@ func rmi(args []string) {
 			args := []string{"inspect", "--format", "json", "--type", "image", imageID}
 			output, err := podman.CmdOutput(args...)
 			if err != nil {
+				if errors.As(err, &podman.ErrInternal) {
+					logrus.Fatalf("Image '%s' does not exist", imageID)
+				}
 				logrus.Fatal(err)
 			}
 
@@ -106,7 +116,13 @@ func rmi(args []string) {
 			logrus.Infof("Removing image %s", imageID)
 			err = removeImage(imageID)
 			if err != nil {
-				logrus.Fatal(err)
+				if errors.As(err, &podman.ErrHasChildren) {
+					logrus.Fatalf("Image '%s' has dependent children", imageID)
+				}
+				if errors.As(err, &podman.ErrNonExistent) {
+					logrus.Fatalf("Image '%s' does not exist", imageID)
+				}
+				logrus.Fatal("Internal Podman error: %w", err)
 			}
 		}
 	}
@@ -119,7 +135,7 @@ func removeImage(image string) error {
 	}
 	err := podman.CmdRun(args...)
 	if err != nil {
-		logrus.Error(err)
+		return err
 	}
 	return nil
 }

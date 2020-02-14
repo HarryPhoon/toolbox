@@ -3,6 +3,7 @@ package podman
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -10,6 +11,21 @@ import (
 	"github.com/mcuadros/go-version"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+)
+
+var (
+	// ErrNonExistent signals one of the specified containers does not exist (applies to `podman rm/rmi`)
+	ErrNonExistent = errors.New("exit status 1")
+	// ErrRunningContainer signals one of the specified containers is paused or running (applies to `podman rm`)
+	ErrRunningContainer = errors.New("exit status 2")
+	// ErrHasChildren signals one of the specified images has child images or is used by a container (applies to `podman rmi`)
+	ErrHasChildren = errors.New("exit status 2")
+	// ErrInternal signals an error in Podman itself
+	ErrInternal = errors.New("exit status 125")
+	// ErrCmdCantInvoke signals a contained command cannot be invoked (applies to `podman run/exec`)
+	ErrCmdCantInvoke = errors.New("exit status 126")
+	// ErrCmdNotFound signals a contained command cannot be found (applies to `podman run/exec`)
+	ErrCmdNotFound = errors.New("exit status 127")
 )
 
 func IsPathBindMount(path string, containerInfo map[string]interface{}) bool {
