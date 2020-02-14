@@ -33,6 +33,7 @@ var (
 		loglevel  string
 		logPodman bool
 		assumeyes bool
+		verbose   bool
 	}
 	rootCmd = &cobra.Command{
 		Use:   "toolbox",
@@ -77,6 +78,9 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&rootFlags.assumeyes, "assumeyes", "y", false, "Automatically answer yes for all questions.")
 	rootCmd.PersistentFlags().BoolVar(&rootFlags.logPodman, "log-podman", false, "Show the log output of Podman")
 	viper.BindPFlag("log-podman", rootCmd.PersistentFlags().Lookup("log-podman"))
+	// This flag is kept for compatibility reasons. In the future it would be better removed.
+	rootCmd.PersistentFlags().BoolVar(&rootFlags.verbose, "verbose", false, "Set log-level to 'debug'")
+	rootCmd.PersistentFlags().MarkDeprecated("verbose", "use 'log-level' instead.")
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -111,6 +115,10 @@ func setUpLoggers() error {
 		DisableTimestamp:       true,
 		DisableLevelTruncation: true,
 	})
+
+	if rootFlags.verbose {
+		rootFlags.loglevel = "debug"
+	}
 
 	lvl, err := logrus.ParseLevel(rootFlags.loglevel)
 	if err != nil {
