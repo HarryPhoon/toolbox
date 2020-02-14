@@ -67,10 +67,16 @@ func rm(args []string) error {
 		containers := utils.JoinJSON("ID", Dcontainers, Ccontainers)
 
 		for _, container := range containers {
-			logrus.Infof("Deleting container %s", container["ID"].(string))
+			logrus.Infof("Deleting container %s (%s)", container["ID"].(string), container["Names"].(string))
 			err = removeContainer(container["ID"].(string))
 			if err != nil {
-				logrus.Error(err)
+				if errors.As(err, &podman.ErrRunningContainer) {
+					logrus.Errorf("Container '%s' is running", container["Names"].(string))
+				}
+				if errors.As(err, &podman.ErrNonExistent) {
+					logrus.Errorf("Container '%s' does not exist", container["Names"].(string))
+				}
+				logrus.Error("Internal Podman error: %w", err)
 			}
 		}
 	} else {
@@ -78,16 +84,14 @@ func rm(args []string) error {
 			logrus.Fatal("Missing argument")
 		}
 
-		var ErrPodmanInternal = errors.New("Internal Podman error")
-
 		for _, containerName := range args {
 			// Check if the container exists
 			logrus.Infof("Inspecting container %s", containerName)
 			args := []string{"inspect", "--format", "json", "--type", "container", containerName}
 			output, err := podman.CmdOutput(args...)
 			if err != nil {
-				if errors.As(err, &ErrPodmanInternal) {
-					logrus.Fatalf("Container %s does not exist", containerName)
+				if errors.As(err, &podman.ErrInternal) {
+					logrus.Fatalf("Container '%s' does not exist", containerName)
 				}
 				logrus.Fatal(err)
 			}
@@ -96,7 +100,7 @@ func rm(args []string) error {
 
 			err = json.Unmarshal(output, &info)
 			if err != nil {
-				panic(err)
+				logrus.Fatal(err)
 			}
 
 			// Check if it is a toolbox container
@@ -112,7 +116,13 @@ func rm(args []string) error {
 			logrus.Infof("Removing container %s", containerName)
 			err = removeContainer(containerName)
 			if err != nil {
-				logrus.Fatal(err)
+				if errors.As(err, &podman.ErrRunningContainer) {
+					logrus.Fatalf("Container '%s' is running", containerName)
+				}
+				if errors.As(err, &podman.ErrNonExistent) {
+					logrus.Fatalf("Container '%s' does not exist", containerName)
+				}
+				logrus.Fatal("Internal Podman error: %w", err)
 			}
 		}
 	}
