@@ -200,7 +200,7 @@ func create(args []string) error {
 		"--user", "root:root"}
 
 	// Check which version of toolbox (shell or golang) is the system default (according to PATH).
-	// The command used as an entry point is called differently and accept a bit different flags.
+	// The command used as an entry point accepts a bit different flags.
 	logrus.Info("Checking what implementation of Toolbox is the system default")
 	var command []string
 	toolboxPath, err := exec.LookPath("toolbox")
@@ -229,16 +229,17 @@ func create(args []string) error {
 		// Check if on the first line is present call to the 'sh' binary (shebang)
 		if strings.Contains(scanner.Text(), "/sh") {
 			logrus.Info("The used implementation is in shell")
-			command = []string{"toolbox", "--verbose", "init-container"}
+			command = []string{"toolbox", "--verbose"}
 		} else {
 			logrus.Info("The used implementation is in go")
-			command = []string{"toolbox", "--log-level", "debug", "initContainer"}
+			command = []string{"toolbox", "--log-level", "debug"}
 		}
 	} else {
 		logrus.Fatalf("Could not read from file %s", toolboxPath)
 	}
 
 	command = append(command, []string{
+		"init-container",
 		"--home", viper.GetString("HOME"),
 		"--monitor-host",
 		"--shell", viper.GetString("SHELL"),
