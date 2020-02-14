@@ -43,7 +43,7 @@ var (
 )
 
 var initContainerCmd = &cobra.Command{
-	Use:   "initContainer",
+	Use:   "init-container",
 	Short: "Initialize a running container",
 	Run: func(cmd *cobra.Command, args []string) {
 		initContainer(args)
