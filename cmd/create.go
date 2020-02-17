@@ -19,7 +19,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"os/exec"
 	"os/user"
 	"path/filepath"
 	"strings"
@@ -185,7 +184,7 @@ func create(args []string) error {
 	createArgs := []string{
 		"create",
 		"--dns", "none",
-		"--env", fmt.Sprintf("TOOLBOX_PATH=%s", viper.GetString("TOOLBOX_CMD_PATH")),
+		"--env", fmt.Sprintf("TOOLBOX_PATH=%s", viper.GetString("TOOLBOX_PATH")),
 		"--group-add", sudoGroup,
 		"--hostname", "toolbox",
 		"--ipc", "host",
@@ -199,24 +198,7 @@ func create(args []string) error {
 		"--userns=keep-id",
 		"--user", "root:root"}
 
-	// Check which version of toolbox (shell or golang) is the system default (according to PATH).
-	// The command used as an entry point accepts a bit different flags.
-	logrus.Info("Checking what implementation of Toolbox is the system default")
-	var command []string
-	toolboxPath, err := exec.LookPath("toolbox")
-	if err != nil {
-		logrus.Debug(err)
-		logrus.Info("Could not resolve path to command 'toolbox'; 'toolbox' is probably not in the PATH")
-		logrus.Warn("Toolbox was not found in PATH. The container will use this binary as the entry point")
-		toolboxPath, err = filepath.Abs(os.Args[0])
-		if err != nil {
-			logrus.Debug(err)
-			logrus.Fatalf("Could not find absolute path to '%s'", os.Args[0])
-		}
-	}
-
-	logrus.Infof("System default Toolbox is %s", toolboxPath)
-
+	toolboxPath := viper.GetString("TOOLBOX_PATH")
 	f, err := os.Open(toolboxPath)
 	if err != nil {
 		logrus.Debug(err)
@@ -224,6 +206,7 @@ func create(args []string) error {
 	}
 	defer f.Close()
 
+	var command []string
 	scanner := bufio.NewScanner(f)
 	if scanner.Scan() {
 		// Check if on the first line is present call to the 'sh' binary (shebang)
@@ -403,7 +386,7 @@ func create(args []string) error {
 	}
 
 	createArgs = append(createArgs, []string{
-		"--volume", fmt.Sprintf("%s:/usr/bin/toolbox:ro", toolboxPath),
+		"--volume", fmt.Sprintf("%s:/usr/bin/toolbox:ro", viper.GetString("TOOLBOX_PATH")),
 		"--volume", fmt.Sprintf("%s:%s", viper.GetString("XDG_RUNTIME_DIR"), viper.GetString("XDG_RUNTIME_DIR")),
 		"--volume", fmt.Sprintf("%s/.flatpak-helper/monitor:/run/host/monitor", viper.GetString("XDG_RUNTIME_DIR")),
 		"--volume", fmt.Sprintf("%s:%s:rslave", homeCanonical, homeCanonical),
