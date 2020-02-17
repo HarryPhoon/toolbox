@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/containers/toolbox/pkg/utils"
 	"github.com/spf13/cobra"
 
 	homedir "github.com/mitchellh/go-homedir"
@@ -48,11 +49,31 @@ developing and debugging software that runs fully unprivileged using Podman.`,
 			}
 
 			// Resolve the path to the toolbox binary
-			toolboxCmdPath, _ := filepath.Abs(os.Args[0])
+			toolboxCmdPath, err := filepath.Abs(os.Args[0])
+			if err != nil {
+				logrus.Fatalf("Failed to resolve absolute path to %s", os.Args[0])
+			}
 			viper.Set("TOOLBOX_CMD_PATH", toolboxCmdPath)
+			logrus.Debugf("Absolute path to %s is %s", os.Args[0], viper.Get("TOOLBOX_CMD_PATH"))
+
+			// Find out if the TOOLBOX_PATH env var is set
+			toolboxPath := viper.GetString("TOOLBOX_PATH")
+
+			if utils.PathExists("/run/.containerenv") {
+				if toolboxPath == "" {
+					logrus.Fatal("TOOLBOX_PATH is not set")
+				}
+			} else {
+				if toolboxPath == "" {
+					viper.Set("TOOLBOX_PATH", viper.GetString("TOOLBOX_CMD_PATH"))
+				}
+			}
+
+			logrus.Debugf("TOOLBOX_PATH is %s", viper.GetString("TOOLBOX_PATH"))
 
 			// Set the toolbox runtime directory
 			viper.Set("TOOLBOX_RUNTIME_DIRECTORY", fmt.Sprintf("%s/toolbox", viper.GetString("XDG_RUNTIME_DIR")))
+			logrus.Debugf("Toolbox runtime directory is %s", viper.GetString("TOOLBOX_RUNTIME_DIRECTORY"))
 
 			// Here we could place some logic to take care of invoing toolbox or other commands from within container by piping them to the host
 			// FIXME
