@@ -405,6 +405,7 @@ func create(args []string) error {
 
 	output, err = podman.CmdOutput(createArgs...)
 	if err != nil {
+		logrus.Debug(err)
 		logrus.Fatalf("Failed to create container %s", containerName)
 	}
 
