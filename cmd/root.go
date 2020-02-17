@@ -63,6 +63,7 @@ developing and debugging software that runs fully unprivileged using Podman.`,
 				if toolboxPath == "" {
 					logrus.Fatal("TOOLBOX_PATH is not set")
 				}
+				logrus.Fatal("Toolbox currently does not work inside of a container. Please, run it on the host.")
 			} else {
 				if toolboxPath == "" {
 					viper.Set("TOOLBOX_PATH", viper.GetString("TOOLBOX_CMD_PATH"))
