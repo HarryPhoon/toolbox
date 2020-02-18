@@ -44,32 +44,34 @@ func IsPathBindMount(path string, containerInfo map[string]interface{}) bool {
 //
 // Takes in one string parameter that should be in the format that is used for versioning (eg. 1.0.0, 2.5.1-dev).
 //
-// Returns true if Podman version is at least equal to the provided version.
-// Returns false if Podman version is not sufficient.
-func CheckPodmanVersion(requiredVersion string) bool {
+// Returns 0 if provided version equals Podman version
+// Returns 1 if provided version is bigger than Podman version
+// Returns -1 if provided version is lower than Podman version
+func CheckVersion(requiredVersion string) int {
+	podmanVersion, _ := GetVersion()
+
+	podmanVersion = version.Normalize(podmanVersion)
+	requiredVersion = version.Normalize(requiredVersion)
+
+	return version.CompareSimple(podmanVersion, requiredVersion)
+}
+
+// GetVersion returns version of Podman in a string
+func GetVersion() (string, error) {
 	args := []string{"version", "-f", "json"}
 	output, err := CmdOutput(args...)
 	if err != nil {
-		logrus.Error(err)
-		return false
+		return "", err
 	}
 
 	var jsonoutput map[string]interface{}
 	err = json.Unmarshal(output, &jsonoutput)
 	if err != nil {
-		logrus.Error(err)
-		return false
+		return "", err
 	}
 
 	podmanVersion := jsonoutput["Client"].(map[string]interface{})["Version"].(string)
-	podmanVersion = version.Normalize(podmanVersion)
-	requiredVersion = version.Normalize(requiredVersion)
-
-	if version.CompareSimple(podmanVersion, requiredVersion) >= 0 {
-		return true
-	}
-
-	return false
+	return podmanVersion, nil
 }
 
 // PodmanInfo is a wrapper around `podman info` command

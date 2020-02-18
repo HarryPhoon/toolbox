@@ -340,7 +340,7 @@ func create(args []string) error {
 	}
 
 	logrus.Info("Checking if 'podman create' supports option '--ulimit host'")
-	if podman.CheckPodmanVersion("1.5.0") {
+	if podman.CheckVersion("1.5.0") >= 0 {
 		logrus.Info("Option '--ulimit host' is supported")
 		ulimitHost = []string{"--ulimit", "host"}
 	} else {
