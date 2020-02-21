@@ -111,9 +111,9 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
+	rootCmd.PersistentFlags().BoolVarP(&rootFlags.assumeyes, "assumeyes", "y", false, "Automatically answer yes for all questions")
 	rootCmd.PersistentFlags().StringVar(&rootFlags.loglevel, "log-level", "warn", "Log messages above specified level: trace, debug, info, warn, error, fatal or panic")
-	rootCmd.PersistentFlags().BoolVarP(&rootFlags.assumeyes, "assumeyes", "y", false, "Automatically answer yes for all questions.")
-	rootCmd.PersistentFlags().BoolVar(&rootFlags.logPodman, "log-podman", false, "Show the log output of Podman")
+	rootCmd.PersistentFlags().BoolVar(&rootFlags.logPodman, "log-podman", false, "Show the log output of Podman. The log level is handled by the log-level option")
 	viper.BindPFlag("log-podman", rootCmd.PersistentFlags().Lookup("log-podman"))
 	// This flag is kept for compatibility reasons. In the future it would be better removed.
 	rootCmd.PersistentFlags().BoolVar(&rootFlags.verbose, "verbose", false, "Set log-level to 'debug'")
