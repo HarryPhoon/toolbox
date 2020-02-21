@@ -47,7 +47,7 @@ func IsPathBindMount(path string, containerInfo map[string]interface{}) bool {
 	return false
 }
 
-// CheckPodmanVersion compares provided version with the version of Podman.
+// CheckVersion compares provided version with the version of Podman.
 //
 // Takes in one string parameter that should be in the format that is used for versioning (eg. 1.0.0, 2.5.1-dev).
 //
