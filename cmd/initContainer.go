@@ -61,13 +61,17 @@ func init() {
 
 	flags := initContainerCmd.Flags()
 	flags.StringVar(&initContFlags.home, "home", "", "Create a user inside the toolbox container whose login directory is HOME.")
+	initContainerCmd.MarkFlagRequired("home")
 	flags.BoolVar(&initContFlags.homeLink, "home-link", false, "Make /home a symbolic link to /var/home.")
 	flags.BoolVar(&initContFlags.mediaLink, "media-link", false, "Make /media a symbolic link to /run/media")
 	flags.BoolVar(&initContFlags.mntLink, "mnt-link", false, "Make /mnt a symbolic link to /var/mnt")
 	flags.BoolVar(&initContFlags.monitorHost, "monitor-host", false, `Ensure that key configuration files (hosts, timezone,..) inside the toolbox container are in sync with the host.`)
 	flags.StringVar(&initContFlags.shell, "shell", "", "Create a user inside the toolbox container whose login shell is SHELL.")
+	initContainerCmd.MarkFlagRequired("shell")
 	flags.IntVar(&initContFlags.uid, "uid", 0, "Create a user inside the toolbox container whose numerical user ID is UID.")
+	initContainerCmd.MarkFlagRequired("uid")
 	flags.StringVar(&initContFlags.user, "user", "", "Create a user inside the toolbox container whose login name is USER.")
+	initContainerCmd.MarkFlagRequired("user")
 }
 
 func initContainer(args []string) {
