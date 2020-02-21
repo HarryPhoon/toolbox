@@ -15,7 +15,7 @@ load helpers
   is "$output" "" "Output of list should be blank"
 }
 
-@test "Run list with zero images (-i flag)" {
+@test "Run list with two images (-i flag)" {
   run_toolbox list -i
   is "${#lines[@]}" "3" "Expected number of lines of the output is 3"
 
