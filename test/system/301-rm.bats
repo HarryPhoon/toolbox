@@ -4,12 +4,12 @@ load helpers
 
 @test "Try to remove a nonexistent container" {
   run_toolbox 1 rm nonexistentcontainer
-  is "$output" "toolbox: failed to inspect $todelete" "Toolbox should fail with: no such container"
+  is "$output" "level=fatal msg=\"Container 'nonexistentcontainer' does not exist\"" "Toolbox should fail with: Container 'nonexistentcontainer' does not exist"
 }
 
 @test "Try to remove the running container 'running'" {
   run_toolbox 1 rm running
-  is "$output" "toolbox: failed to remove container running" "Toolbox should fail to remove the running container"
+  is "$output" "level=fatal msg=\"Container 'running' is running\"" "Toolbox should fail to remove the running container"
 }
 
 @test "Remove the not running container 'not-running'" {
