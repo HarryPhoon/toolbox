@@ -93,7 +93,7 @@ developing and debugging software that runs fully unprivileged using Podman.`,
 			}
 
 			// Here we could place some logic to take care of invoing toolbox or other commands from within container by piping them to the host
-			// FIXME
+			// TODO
 
 			return nil
 		},

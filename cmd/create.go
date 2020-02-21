@@ -117,7 +117,6 @@ func create(args []string) error {
 	if podman.ContainerExists(containerName) {
 		logrus.Fatalf("Container %s already exists", containerName)
 	}
-
 	logrus.Infof("Used image will be: %s", imageName)
 
 	// Look for the toolbox image on local machine
