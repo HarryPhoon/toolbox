@@ -16,14 +16,18 @@ limitations under the License.
 package cmd
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
+
+	"github.com/containers/toolbox/pkg/podman"
+	"github.com/mitchellh/go-homedir"
 
 	"github.com/containers/toolbox/pkg/utils"
 	"github.com/spf13/cobra"
 
-	homedir "github.com/mitchellh/go-homedir"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -78,6 +82,15 @@ developing and debugging software that runs fully unprivileged using Podman.`,
 			// Set the toolbox runtime directory
 			viper.Set("TOOLBOX_RUNTIME_DIRECTORY", fmt.Sprintf("%s/toolbox", viper.GetString("XDG_RUNTIME_DIR")))
 			logrus.Debugf("Toolbox runtime directory is %s", viper.GetString("TOOLBOX_RUNTIME_DIRECTORY"))
+
+			// Check if it is needed to migrate to a new Podman version
+			// This doesn't have to be done in a container
+			if calledCmd != "init-container" && !inContainer {
+				err = migrate()
+				if err != nil {
+					logrus.Fatal(err)
+				}
+			}
 
 			// Here we could place some logic to take care of invoing toolbox or other commands from within container by piping them to the host
 			// FIXME
@@ -151,6 +164,69 @@ func setUpLoggers() error {
 	}
 
 	logrus.SetLevel(lvl)
+
+	return nil
+}
+
+func migrate() error {
+	// Find home directory.
+	home, err := homedir.Dir()
+	if err != nil {
+		return fmt.Errorf("Could not get home directory: %w", err)
+	}
+	homeFull, err := homedir.Expand(home)
+	if err != nil {
+		return fmt.Errorf("Could not get full path to home directory: %w", err)
+	}
+	configDirectory := fmt.Sprintf("%s/.config/toolbox", homeFull)
+	migrateStampPath := fmt.Sprintf("%s/podman-system-migrate", configDirectory)
+
+	podmanVersion, err := podman.GetVersion()
+	if err != nil {
+		return fmt.Errorf("Could not get the version of Podman: %w", err)
+	}
+	logrus.Debugf("Current Podman version is %s", podmanVersion)
+
+	err = os.MkdirAll(configDirectory, 0664)
+	if err != nil {
+		return fmt.Errorf("Configuration directory not created: %w", err)
+	}
+
+	migrateLock := sync.Mutex{}
+	migrateLock.Lock()
+
+	migrateStampFile, err := os.OpenFile(migrateStampPath, os.O_CREATE|os.O_RDWR, 0664)
+	if err != nil {
+		return fmt.Errorf("Could not open file '%s': %w", migrateStampPath, err)
+	}
+	defer migrateStampFile.Close()
+
+	podmanVersionOld := ""
+	scanner := bufio.NewScanner(migrateStampFile)
+	if scanner.Scan() {
+		podmanVersionOld = scanner.Text()
+	}
+
+	if podmanVersionOld != "" {
+		logrus.Debugf("Old Podman version is %s", podmanVersionOld)
+	}
+
+	versionComp := podman.CheckVersion(podmanVersionOld)
+	if versionComp == 0 {
+		logrus.Debugf("Migration not needed: Podman version %s is unchanged", podmanVersion)
+		return nil
+	} else if versionComp > 0 {
+		logrus.Debugf("Migration not needed: Podman version %s is old", podmanVersion)
+		return nil
+	} else {
+		logrus.Debugf("Migration needed: Podman version %s is new", podmanVersion)
+		err = podman.CmdRun("system", "migrate")
+		if err != nil {
+			return fmt.Errorf("Unable to migrate containers: %w", err)
+		}
+		logrus.Debugf("Migration to Podman version %s was ok", podmanVersion)
+		migrateStampFile.WriteString(podmanVersion)
+	}
 
 	return nil
 }
