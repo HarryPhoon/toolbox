@@ -45,6 +45,11 @@ var (
 var initContainerCmd = &cobra.Command{
 	Use:   "init-container",
 	Short: "Initialize a running container",
+	PreRun: func(cmd *cobra.Command, args []string) {
+		if !utils.PathExists("/run/.containerenv") {
+			logrus.Fatal("The 'init-container' command can only be used inside containers")
+		}
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		initContainer(args)
 	},
