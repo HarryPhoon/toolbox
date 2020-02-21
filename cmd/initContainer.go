@@ -94,7 +94,6 @@ func initContainer(args []string) {
 
 	if initContFlags.monitorHost {
 		logrus.Info("Monitoring host")
-		// workingDirectory := viper.GetString("PWD")
 
 		if utils.PathExists("/run/host/etc") {
 			logrus.Info("Path /run/host/etc exists. Mount binding to that location will happen now.")
@@ -137,6 +136,7 @@ func initContainer(args []string) {
 			}
 		}
 
+		// TODO: flatpak-session-helper cannot be used over dbus as root; some kind of workaround has to be implemented
 		if utils.PathExists("/run/host/monitor") {
 			logrus.Info("Path /run/host/monitor exists. Mount binding to that path will happen now.")
 			localtimeTarget, err := os.Readlink("/etc/localtime")
