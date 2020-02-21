@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/mcuadros/go-version"
 	"github.com/sirupsen/logrus"
@@ -26,6 +27,12 @@ var (
 	ErrCmdCantInvoke = errors.New("exit status 126")
 	// ErrCmdNotFound signals a contained command cannot be found (applies to `podman run/exec`)
 	ErrCmdNotFound = errors.New("exit status 127")
+	// ErrServiceUnavailable signals a problem while pulling an image from a registry (applies to `podman pull`)
+	ErrServiceUnavailable = errors.New("invalid status code from registry 503 (Service Unavailable)")
+	// ErrConnectionRefused signals the host machine is probably not online (applies to `podman pull`)
+	ErrConnectionRefused = errors.New("connection refused")
+	// ErrUnknownManifest signals the requested image does not exist (applies to `podman pull`)
+	ErrUnknownManifest = errors.New("manifest unknown")
 )
 
 func IsPathBindMount(path string, containerInfo map[string]interface{}) bool {
@@ -189,7 +196,7 @@ func ContainerExists(containerName string) bool {
 }
 
 // PullImage pulls an image
-func PullImage(imageName string) bool {
+func PullImage(imageName string) error {
 	args := []string{"pull", imageName}
 
 	logLevel := fmt.Sprint(logrus.GetLevel())
@@ -199,16 +206,29 @@ func PullImage(imageName string) bool {
 
 	cmd := exec.Command("podman", args...)
 
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
 
 	err := cmd.Run()
-	if err != nil {
-		return false
+	if logLevel == "debug" || logLevel == "trace" {
+		fmt.Fprint(os.Stderr, stderr.String())
 	}
 
-	return true
+	if err != nil {
+		if strings.Contains(stderr.String(), "invalid status code from registry 503 (Service Unavailable)") || strings.Contains(stderr.String(), "received unexpected HTTP status: 503 Service Temporarily Unavailable") {
+			return ErrServiceUnavailable
+		}
+		if strings.Contains(stderr.String(), "read: connection refused") {
+			return ErrConnectionRefused
+		}
+		if strings.Contains(stderr.String(), "manifest unknown: manifest unknown") {
+			return ErrUnknownManifest
+		}
+		return err
+	}
+
+	return nil
+
 }
 
 // CmdOutput is a wrapper around Podman that returns the output of the invoked command.
