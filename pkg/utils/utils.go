@@ -179,7 +179,10 @@ func UpdateContainerAndImageNames(containerName string, imageName string, releas
 	// If no container name is specified then use the image name and it's version
 	if containerName == "" {
 		containerName = strings.ReplaceAll(imageName, ":", "-")
-		containerName = strings.Split(containerName, "/")[1]
+		if strings.Contains(containerName, "/") {
+			nameSplit := strings.Split(containerName, "/")
+			containerName = nameSplit[len(nameSplit)-1]
+		}
 	}
 
 	return containerName, imageName
