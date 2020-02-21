@@ -8,7 +8,7 @@ load helpers
 }
 
 @test "Echo 'Hello World' inside of the 'running' container" {
-  run_toolbox run -c running echo "Hello World"
+  run_toolbox run running echo "Hello World"
   is "$output" "Hello World" "Should say 'Hello World'"
 }
 
@@ -18,6 +18,6 @@ load helpers
 }
 
 @test "Echo 'hello World' again in the 'running' container after being stopped and exit" {
-  run_toolbox run -c running echo "Hello World"
+  run_toolbox run running echo "Hello World"
   is "$output" "Hello World" "Should say 'Hello World'"
 }

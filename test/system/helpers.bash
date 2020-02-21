@@ -131,7 +131,7 @@ function create_toolbox() {
         if [ "$naming" = "" ]; then
             run_toolbox '?' -y create -i "$image"
         else
-            run_toolbox '?' -y create -c "$naming-$i" -i "$image"
+            run_toolbox '?' -y create "$naming-$i" -i "$image"
         fi
     done
 }
@@ -157,17 +157,12 @@ function get_images() {
 
 function remove_all_images() {
     echo "# [remove_all_images]"
-    run_podman images --all --format '{{.Repository}}:{{.Tag}} {{.ID}}'
-    for line in "${lines[@]}"; do
-        set $line
-        run_podman rmi --force "$1" >/dev/null 2>&1 || true
-        run_podman rmi --force "$2" >/dev/null 2>&1 || true
-    done
+    run_toolbox '?' rmi --all --force
 }
 
 function remove_all_images_but_default() {
     echo "# [remove_all_images_but_default]"
-    found_needed_image=1
+    found_needed_image=0
     run_podman images --all --format '{{.Repository}}:{{.Tag}} {{.ID}}'
     for line in "${lines[@]}"; do
         set $line

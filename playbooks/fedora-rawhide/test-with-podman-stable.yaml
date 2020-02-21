@@ -2,20 +2,25 @@
 - hosts: ci-node-rawhide
   tasks:
     - name: Build toolbox
-      command: meson builddir
+      command: go build
       args:
         chdir: '{{ zuul.project.src_dir }}'
 
-    - name: Install toolbox
-      become: yes
-      command: ninja -C builddir install
+    - name: Show the content of the source folder
+      command: ls
       args:
         chdir: '{{ zuul.project.src_dir }}'
+
+    - name: "Show PATH"
+      debug:
+        msg: The PATH is {{ ansible_env.PATH }}
+      environment:
+        PATH: '{{ zuul.project.src_dir }}/:{{ ansible_env.PATH }}'
 
     - name: Run system tests
       command: bats ./test/system
       environment:
         PODMAN: '/usr/bin/podman'
-        TOOLBOX: './toolbox'
+        PATH: '{{ zuul.project.src_dir }}/:{{ ansible_env.PATH }}'
       args:
         chdir: '{{ zuul.project.src_dir }}'
