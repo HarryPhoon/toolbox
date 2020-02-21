@@ -58,18 +58,21 @@ developing and debugging software that runs fully unprivileged using Podman.`,
 
 			// Find out if the TOOLBOX_PATH env var is set
 			toolboxPath := viper.GetString("TOOLBOX_PATH")
+			calledCmd := cmd.CalledAs()
+			inContainer := utils.PathExists("/run/.containerenv")
 
-			if utils.PathExists("/run/.containerenv") {
+			if inContainer {
 				if toolboxPath == "" {
 					logrus.Fatal("TOOLBOX_PATH is not set")
 				}
-				logrus.Fatal("Toolbox currently does not work inside of a container. Please, run it on the host.")
+				if calledCmd != "init-container" {
+					logrus.Fatal("Toolbox currently does not work inside of a container. Please, run it on the host.")
+				}
 			} else {
 				if toolboxPath == "" {
 					viper.Set("TOOLBOX_PATH", viper.GetString("TOOLBOX_CMD_PATH"))
 				}
 			}
-
 			logrus.Debugf("TOOLBOX_PATH is %s", viper.GetString("TOOLBOX_PATH"))
 
 			// Set the toolbox runtime directory
