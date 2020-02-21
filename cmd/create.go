@@ -17,11 +17,15 @@ package cmd
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"os/user"
 	"path/filepath"
 	"strings"
+	"time"
+
+	"github.com/briandowns/spinner"
 
 	"github.com/containers/toolbox/pkg/podman"
 	"github.com/containers/toolbox/pkg/utils"
@@ -118,20 +122,52 @@ func create(args []string) error {
 
 	// Look for the toolbox image on local machine
 	imageFound := findLocalToolboxImage(imageName)
+	imagePulled := false
 
 	if !imageFound {
 		logrus.Infof("Image '%s' was not found", imageName)
 
+		// Currently Toolbox only trusts one registry: registry.fedoraproject.org
+		imageName = fmt.Sprintf("registry.fedoraproject.org/%s", imageName)
+
 		response := ""
-		fmt.Printf("Do you want to download image %s (+-200MB)? [y/N]: ", imageName)
+		fmt.Println("Image required to create toolbox container.")
+		fmt.Printf("Do you want to pull %s (+-200MB)? [y/N]: ", imageName)
 		fmt.Scanf("%s", &response)
 		response = strings.ToLower(response)
 
 		if response == "y" || response == "yes" {
-			imagePulled := podman.PullImage(imageName)
-			if !imagePulled {
-				logrus.Fatal("Failed to pull image")
+			s := spinner.New(spinner.CharSets[9], 500*time.Millisecond)
+			// The spinner doesn't have to be used when log output is showed
+			if !viper.GetBool("log-podman") {
+				s.Prefix = fmt.Sprintf("Pulling %s ", imageName)
+				s.Writer = os.Stderr
+				s.Start()
 			}
+
+			var err error
+			for true {
+				err = podman.PullImage(imageName)
+				if err != nil {
+					if errors.Is(err, podman.ErrServiceUnavailable) {
+						logrus.Debug("Received Service Unavailable error. Trying again to pull the image.")
+						time.Sleep(200 * time.Millisecond)
+						continue
+					}
+					err = fmt.Errorf("Failed to pull '%s': %v", imageName, err)
+				}
+				break
+			}
+
+			if !viper.GetBool("log-podman") {
+				s.Stop()
+			}
+
+			if err != nil {
+				logrus.Fatal(err)
+			}
+
+			imagePulled = true
 		} else {
 			return nil
 		}
@@ -141,8 +177,9 @@ func create(args []string) error {
 		logrus.Infof("Image '%s' was found", imageName)
 	}
 
-	// If the image was not pulled that check if it is a Toolbox image
-	if imageFound {
+	// Check if the image is a Toolbox image
+	// FIXME: In the future this check will have to be done only for local images because for pulled images it can be done by inspecting their manifest before pulling them
+	if imageFound || imagePulled {
 		logrus.Infof("Checking if '%s' is a Toolbox image", imageName)
 		inspectInfo, err := podman.PodmanInspect("image", imageName)
 		if err != nil {
@@ -415,16 +452,9 @@ func create(args []string) error {
 func findLocalToolboxImage(imageName string) bool {
 	logrus.Info("Looking for the image locally")
 
+	logrus.Infof("Looking for image %s", imageName)
 	if podman.ImageExists(imageName) {
 		return true
-	}
-
-	if utils.ReferenceCanBeID(imageName) {
-		logrus.Infof("Looking for image %s", imageName)
-
-		if podman.ImageExists(imageName) {
-			return true
-		}
 	}
 
 	hasDomain := utils.ReferenceHasDomain(imageName)
