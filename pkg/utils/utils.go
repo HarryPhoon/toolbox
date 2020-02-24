@@ -174,6 +174,18 @@ func UpdateContainerAndImageNames(containerName string, imageName string, releas
 		} else {
 			imageName = fmt.Sprintf("f%s/fedora-toolbox:%s", release, release)
 		}
+	} else {
+		// If the image name for fedora toolbox does not have the parent defined (eg. f31/ for
+		// fedora-toolbox:31) then add it here.
+		reg, err := regexp.Compile("^fedora-toolbox:[1-9]{1}[0-9]*")
+		if err == nil {
+			if reg.MatchString(imageName) {
+				imageNameParts := strings.SplitN(imageName, ":", 2)
+				imageName = fmt.Sprintf("f%s/%s:%s", imageNameParts[1], imageNameParts[0], imageNameParts[1])
+			}
+		} else {
+			logrus.Debug(err)
+		}
 	}
 
 	// If no container name is specified then use the image name and it's version
