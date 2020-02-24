@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 
 	"github.com/containers/toolbox/pkg/podman"
 	"github.com/mitchellh/go-homedir"
@@ -53,9 +52,9 @@ developing and debugging software that runs fully unprivileged using Podman.`,
 			}
 
 			// Resolve the path to the toolbox binary
-			toolboxCmdPath, err := filepath.Abs(os.Args[0])
+			toolboxCmdPath, err := os.Executable()
 			if err != nil {
-				logrus.Fatalf("Failed to resolve absolute path to %s", os.Args[0])
+				logrus.Fatalf("Failed to get absolute path to %s", os.Args[0])
 			}
 			viper.Set("TOOLBOX_CMD_PATH", toolboxCmdPath)
 			logrus.Debugf("Absolute path to %s is %s", os.Args[0], viper.Get("TOOLBOX_CMD_PATH"))
