@@ -16,7 +16,6 @@ limitations under the License.
 package cmd
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"os"
@@ -234,36 +233,13 @@ func create(args []string) error {
 		"--userns=keep-id",
 		"--user", "root:root"}
 
-	toolboxPath := viper.GetString("TOOLBOX_PATH")
-	f, err := os.Open(toolboxPath)
-	if err != nil {
-		logrus.Debug(err)
-		logrus.Fatalf("Could not open file %s", toolboxPath)
-	}
-	defer f.Close()
-
-	var command []string
-	scanner := bufio.NewScanner(f)
-	if scanner.Scan() {
-		// Check if on the first line is present call to the 'sh' binary (shebang)
-		if strings.Contains(scanner.Text(), "/sh") {
-			logrus.Info("The used implementation is in shell")
-			command = []string{"toolbox", "--verbose"}
-		} else {
-			logrus.Info("The used implementation is in go")
-			command = []string{"toolbox", "--log-level", "debug"}
-		}
-	} else {
-		logrus.Fatalf("Could not read from file %s", toolboxPath)
-	}
-
-	command = append(command, []string{
-		"init-container",
+	command := []string{
+		"toolbox", "--log-level", "debug", "init-container",
 		"--home", viper.GetString("HOME"),
 		"--monitor-host",
 		"--shell", viper.GetString("SHELL"),
 		"--uid", userID,
-		"--user", viper.GetString("USER")}...)
+		"--user", viper.GetString("USER")}
 
 	logrus.Info("Checking if toolbox.sh profile exists")
 	if utils.PathExists("/etc/profile.d/toolbox.sh") {
