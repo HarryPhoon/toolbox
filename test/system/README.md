@@ -36,10 +36,6 @@ throughout updates of both Toolbox and Podman/libpod.
 Make sure you have `bats` and `podman` with `toolbox` installed on your system.
 
 **Important**
-Before you start the tests, you need to have present two images: the default
-`fedora-toolbox` image for your version of Fedora and the `fedora-toolbox:29`
-image.
-
 - Enter the toolbox root folder
 - Invoke command `bats ./test/system/` and the test suite should fire up
 

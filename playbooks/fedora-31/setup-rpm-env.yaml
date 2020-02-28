@@ -17,5 +17,3 @@
 
     - name: Check versions of crucial packages
       command: rpm -q podman crun conmon fuse-overlayfs flatpak-session-helper golang
-
-    - include_tasks: ./pre-common.yaml
