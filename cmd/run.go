@@ -32,12 +32,12 @@ import (
 
 var (
 	runFlags struct {
-		containerName      string
-		releaseVersion     string
-		emitEscapeSequence bool
-		fallbackToBash     bool
-		promptForCreate    bool
-		pedantic           bool
+		useDefaultContainer bool
+		releaseVersion      string
+		emitEscapeSequence  bool
+		fallbackToBash      bool
+		promptForCreate     bool
+		pedantic            bool
 	}
 )
 
@@ -56,6 +56,7 @@ func init() {
 	// This stops parsing of flags after arguments. Necessary to properly pass the command to the container
 	flags.SetInterspersed(false)
 
+	flags.BoolVarP(&runFlags.useDefaultContainer, "default", "d", false, "Run command inside the system default container (eg. on Fedora 31 -> fedora-toolbox-31)")
 	flags.StringVarP(&runFlags.releaseVersion, "release", "r", "", "Run command inside a toolbox container with the release version")
 	flags.BoolVar(&runFlags.emitEscapeSequence, "escape-sequence", false, "Emit an escape sequence for terminals")
 	flags.BoolVar(&runFlags.fallbackToBash, "fallback-to-bash", false, "If requested program does not exist, fallback to bash")
@@ -76,8 +77,22 @@ func run(args []string) error {
 
 	// When the release version is specified we want to use it over the container name
 	if runFlags.releaseVersion != "" {
+		if len(args) == 0 {
+			logrus.Fatal("You must provide a command to execute")
+		}
+		commands = args[0:]
+	} else if runFlags.useDefaultContainer {
+		if len(args) == 0 {
+			logrus.Fatal("You must provide a command to execute")
+		}
+		containerName = ""
 		commands = args[0:]
 	} else {
+		if len(args) == 0 {
+			logrus.Fatal("You must provide a name of a container")
+		} else if len(args) == 1 {
+			logrus.Fatal("You must provide a command to execute")
+		}
 		containerName = args[0]
 		commands = args[1:]
 	}

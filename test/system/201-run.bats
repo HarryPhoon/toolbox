@@ -3,7 +3,7 @@
 load helpers
 
 @test "Echo 'Hello World' inside of the default container" {
-  run_toolbox run echo "Hello World"
+  run_toolbox run -d echo "Hello World"
   is "$output" "Hello World" "Should say 'Hello World'"
 }
 
