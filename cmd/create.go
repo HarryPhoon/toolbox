@@ -128,13 +128,22 @@ func create(args []string) error {
 		// Currently Toolbox only trusts one registry: registry.fedoraproject.org
 		imageName = fmt.Sprintf("registry.fedoraproject.org/%s", imageName)
 
-		response := ""
-		fmt.Println("Image required to create toolbox container.")
-		fmt.Printf("Do you want to pull %s (+-200MB)? [y/N]: ", imageName)
-		fmt.Scanf("%s", &response)
-		response = strings.ToLower(response)
+		pullImage := false
 
-		if response == "y" || response == "yes" {
+		if !rootFlags.assumeyes {
+			response := ""
+			fmt.Println("Image required to create toolbox container.")
+			fmt.Printf("Do you want to pull %s (+-200MB)? [y/N]: ", imageName)
+			fmt.Scanf("%s", &response)
+			response = strings.ToLower(response)
+			if response == "y" || response == "yes" {
+				pullImage = true
+			}
+		} else {
+			pullImage = true
+		}
+
+		if pullImage {
 			s := spinner.New(spinner.CharSets[9], 500*time.Millisecond)
 			// The spinner doesn't have to be used when log output is showed
 			if !viper.GetBool("log-podman") {
