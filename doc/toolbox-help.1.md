@@ -8,23 +8,20 @@ toolbox\-help - Display help information about Toolbox
 
 ## DESCRIPTION
 
-When no COMMAND is specified, the `toolbox(1)` manual is shown. If a COMMAND
-is specified, a manual page for that command is brought up.
+When no COMMAND is specified, the basic usage screen is shown. If a COMMAND
+is specified, a usage screen for that command is shown.
 
-Note that `toolbox --help ...` is identical to `toolbox help ...` because the
-former is internally converted to the latter.
-
-This page can be displayed with `toolbox help help` or `toolbox help --help`.
+Note that `toolbox --help ...` is identical to `toolbox help ...`.
 
 ## EXAMPLES
 
-### Show the toolbox manual
+### Show the basic usage screen of Toolbox
 
 ```
 $ toolbox help
 ```
 
-### Show the manual for the create command
+### Show the usage screen of the create command
 
 ```
 $ toolbox help create

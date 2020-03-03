@@ -4,7 +4,7 @@
 toolbox\-list - List existing toolbox containers and images
 
 ## SYNOPSIS
-**toolbox list** [*--containers* | *-c*] [*--images* | *-i*]
+**toolbox list** [*options*]
 
 ## DESCRIPTION
 
