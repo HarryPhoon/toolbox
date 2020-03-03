@@ -25,7 +25,7 @@ import (
 
 	"github.com/containers/toolbox/pkg/utils"
 
-	"github.com/cpuguy83/go-md2man/md2man"
+	"github.com/cpuguy83/go-md2man/v2/md2man"
 	"github.com/sirupsen/logrus"
 
 	"github.com/spf13/cobra"
