@@ -4,7 +4,7 @@
 toolbox - Unprivileged development environment
 
 ## SYNOPSIS
-**toolbox** [*--verbose* | *-v*] *COMMAND* [*ARGS*]
+**toolbox** [options] *COMMAND*
 
 ## DESCRIPTION
 
@@ -40,10 +40,13 @@ Automatically answer yes for all questions.
 
 Print a synopsis of this manual and exit.
 
-**--verbose, -v**
+**--log-level**
 
-Print debug information including standard error stream of internal commands.
-Use `-vv` for more detail.
+Log messages above specified level: trace, debug, info, warn, error, fatal or panic (default "warn").
+
+**--log-podman**
+
+Show the log output of Podman. The log level is handled by the log-level option.
 
 ## COMMANDS
 

@@ -4,7 +4,7 @@
 toolbox\-rm - Remove one or more toolbox containers
 
 ## SYNOPSIS
-**toolbox rm** [*--all*] [*--force*] [*CONTAINER*...]
+**toolbox rm** [*options*] [*CONTAINER*...]
 
 ## DESCRIPTION
 
@@ -29,10 +29,10 @@ Force the removal of running and paused toolbox containers.
 
 ## EXAMPLES
 
-### Remove a toolbox container named `fedora-toolbox-gegl:30`
+### Remove a toolbox container named `fedora-toolbox-gegl-30`
 
 ```
-$ toolbox rm fedora-toolbox-gegl:30
+$ toolbox rm fedora-toolbox-gegl-30
 ```
 
 ### Remove all toolbox containers, but not those that are running or paused

@@ -4,7 +4,7 @@
 toolbox\-rmi - Remove one or more toolbox images
 
 ## SYNOPSIS
-**toolbox rmi** [*--all*] [*--force*] [*IMAGE*...]
+**toolbox rmi** [*options*] [*IMAGE*...]
 
 ## DESCRIPTION
 
