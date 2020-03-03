@@ -2,75 +2,100 @@
 [ -z "$BASH_VERSION" ] && return
 
 __toolbox_containers() {
-  podman ps --all --format '{{.Names}}'
+  podman ps --all --format '{{.Names}}' 2>/dev/null
 }
 
 __toolbox_images() {
-  podman images --format '{{.Repository}}:{{.Tag}}'
+  podman images --format '{{.Repository}}:{{.Tag}}' 2>/dev/null
 }
 
 __toolbox() {
-  local MIN_VERSION=29
-  local RAWHIDE_VERSION=32
+  local MIN_VERSION=30
+  local RAWHIDE_VERSION=33
 
-  local commands="create enter help init-container list reset rm rmi run"
+  local commands="create enter help list rm rmi run"
+  local global_options="--assumeyes --help --log-level"
+  local loglevels="trace debug info warn error fatal panic"
 
   declare -A options
-  local options=([create]="--candidate-registry --container --image --release" \
-                 [enter]="--container --release" \
+  local options=([create]="--image --release --help" \
+                 [enter]="--release --help" \
                  [help]="$commands" \
                  [init-container]="--home --home-link --monitor-host --shell --uid --user" \
-		 [list]="--containers --images" \
-		 [rm]="--all --force" \
-		 [rmi]="--all --force" \
-		 [run]="--container --release")
+		 [list]="--containers --images --help" \
+		 [rm]="--all --force --help" \
+		 [rmi]="--all --force --help" \
+		 [run]="--release --help")
 
   _init_completion -s || return
 
+  # If there are no args, show everything
   if [ "${COMP_CWORD}" -eq 1 ]; then
-    mapfile -t COMPREPLY < <(compgen -W "--assumeyes --help --verbose --very-verbose $commands" -- "$2")
+    mapfile -t COMPREPLY < <(compgen -W "$global_options $commands" -- "$2")
     return 0
   fi
 
+  # If a global option is mentioned, don't mention it anymore
+  for option in $global_options; do
+    if [[ "${COMP_LINE}" =~ "$option" ]]; then
+      global_options="${global_options/$option}"
+    fi
+  done
+
+  # If line contains a command, allow completion of command specific options
+  # If not, allow completion only for global options
+  for command in $commands; do
+    if [[ "${COMP_LINE}"  =~ " $command " ]]; then
+      for option in ${options[$command]}; do
+        if [[ "$prev" = "$option" ]]; then
+          case "$prev" in
+            --image | -i)
+              mapfile -t COMPREPLY < <(compgen -W "$(__toolbox_images)" -- "$2")
+              return 0
+              ;;
+            --release | -r)
+              mapfile -t COMPREPLY < <(compgen -W "$(seq $MIN_VERSION $RAWHIDE_VERSION)" -- "$2")
+              return 0
+              ;;
+          esac
+        fi
+      done
+    else
+      case "$prev" in
+        --log-level)
+          mapfile -t COMPREPLY < <(compgen -W "$loglevels" -- "$2")
+          return 0
+          ;;
+        --assumeyes | -y | trace | debug | info | warn | error | fatal | panic)
+          mapfile -t COMPREPLY < <(compgen -W "$global_options $commands" -- "$2")
+          return 0
+          ;;
+      esac
+    fi
+  done
+
   case "$prev" in
-    --verbose | -v | --very-verbose | -vv)
-      mapfile -t COMPREPLY < <(compgen -W "$commands" -- "$2")
-      return 0
-      ;;
-    --container | -c)
-      mapfile -t COMPREPLY < <(compgen -W "$(__toolbox_containers)" -- "$2")
-      return 0
-      ;;
-    --image | -i)
-      mapfile -t COMPREPLY < <(compgen -W "$(__toolbox_images)" -- "$2")
-      return 0
-      ;;
-    --release | -r)
-      mapfile -t COMPREPLY < <(compgen -W "$(seq $MIN_VERSION $RAWHIDE_VERSION)" -- "$2")
-      return 0
-      ;;
-  esac
-
-  local command
-  if [ "${COMP_WORDS[1]}" = --verbose ] || [ "${COMP_WORDS[1]}" = --very-verbose ]; then
-    command=${COMP_WORDS[2]}
-  else
-    command=${COMP_WORDS[1]}
-  fi
-
-  local extra_comps
-  case "$command" in
-    rm)
-      extra_comps="$(__toolbox_containers)"
-      ;;&
-    rmi)
-      extra_comps="$(__toolbox_images)"
-      ;;&
-    *)
-      mapfile -t COMPREPLY < <(compgen -W "${options[$command]} $extra_comps" -- "$2")
+    help)
+      mapfile -t COMPREPLY < <(compgen -W "${options[$prev]}" -- "$2")
       return 0;
       ;;
   esac
+
+  # If last arg is a command, complete it and offer it's local options
+  if [[ ! "${COMP_LINE}" =~ " help " ]]; then
+    case "$prev" in
+      rm | enter | run)
+        mapfile -t COMPREPLY < <(compgen -W "${options[$prev]} $(__toolbox_containers)" -- "$2")
+        ;;
+      rmi)
+        mapfile -t COMPREPLY < <(compgen -W "${options[$prev]} $(__toolbox_images)" -- "$2")
+        ;;
+      *)
+        mapfile -t COMPREPLY < <(compgen -W "${options[$prev]}" -- "$2")
+        return 0;
+        ;;
+    esac
+  fi
 }
 
 complete -F __toolbox toolbox
