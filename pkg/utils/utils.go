@@ -202,16 +202,12 @@ func UpdateContainerAndImageNames(containerName string, imageName string, releas
 
 // IsContainerNameValid checks if the name of a container matches the right pattern
 func IsContainerNameValid(containerName string) bool {
-	reg, err := regexp.Compile("^[a-zA-Z0-9][a-zA-Z0-9_.-]*")
+	matched, err := regexp.MatchString("^[a-zA-Z0-9][a-zA-Z0-9_.-]*$", containerName)
 	if err != nil {
+		logrus.Debug(err)
 		return false
 	}
-
-	if !reg.MatchString(containerName) {
-		return false
-	}
-
-	return true
+	return matched
 }
 
 // NumberPrompt creates an interactive prompt that expects and returns an integer

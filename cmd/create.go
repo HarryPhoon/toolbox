@@ -105,7 +105,7 @@ func create(args []string) error {
 		containerName = args[0]
 
 		if !utils.IsContainerNameValid(containerName) {
-			logrus.Fatal("Container names must match [a-zA-Z0-9][a-zA-Z0-9_.-]*")
+			logrus.Fatal("Container names must match ^[a-zA-Z0-9][a-zA-Z0-9_.-]*$")
 		}
 	}
 

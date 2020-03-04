@@ -16,5 +16,5 @@ load helpers
 
 @test "Try to create a container with invalid custom name" {
   run_toolbox 1 -y create "ßpeci@l.Nam€"
-  is "${lines[0]}" "level=fatal msg=\"Container names must match [a-zA-Z0-9][a-zA-Z0-9_.-]*\"" "Toolbox reports invalid argument for --container"
+  is "${lines[0]}" "level=fatal msg=\"Container names must match ^[a-zA-Z0-9][a-zA-Z0-9_.-]*$\"" "Toolbox reports invalid name for a container"
 }
