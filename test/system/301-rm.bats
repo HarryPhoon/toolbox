@@ -9,7 +9,7 @@ load helpers
 
 @test "Try to remove the running container 'running'" {
   run_toolbox 1 rm running
-  is "$output" "level=fatal msg=\"Container 'running' is running\"" "Toolbox should fail to remove the running container"
+  is "$output" "level=fatal msg=\"Container 'running' is running. Try running the command with --force\"" "Toolbox should fail to remove the running container"
 }
 
 @test "Remove the not running container 'not-running'" {

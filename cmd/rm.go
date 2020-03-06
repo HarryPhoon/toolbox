@@ -117,7 +117,7 @@ func rm(args []string) error {
 			err = removeContainer(containerName)
 			if err != nil {
 				if errors.As(err, &podman.ErrRunningContainer) {
-					logrus.Fatalf("Container '%s' is running", containerName)
+					logrus.Fatalf("Container '%s' is running. Try running the command with --force", containerName)
 				}
 				if errors.As(err, &podman.ErrNonExistent) {
 					logrus.Fatalf("Container '%s' does not exist", containerName)

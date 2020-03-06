@@ -117,7 +117,7 @@ func rmi(args []string) {
 			err = removeImage(imageID)
 			if err != nil {
 				if errors.As(err, &podman.ErrHasChildren) {
-					logrus.Fatalf("Image '%s' has dependent children", imageID)
+					logrus.Fatalf("Image '%s' has dependent children. Try running the command with --force", imageID)
 				}
 				if errors.As(err, &podman.ErrNonExistent) {
 					logrus.Fatalf("Image '%s' does not exist", imageID)
