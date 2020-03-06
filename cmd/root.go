@@ -22,6 +22,7 @@ import (
 	"os"
 
 	"github.com/containers/toolbox/pkg/podman"
+	"github.com/containers/toolbox/pkg/version"
 	"github.com/mitchellh/go-homedir"
 
 	"github.com/containers/toolbox/pkg/utils"
@@ -96,6 +97,7 @@ developing and debugging software that runs fully unprivileged using Podman.`,
 
 			return nil
 		},
+		Version: version.GetVersion(),
 	}
 )
 
