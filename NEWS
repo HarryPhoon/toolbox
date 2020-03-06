@@ -1,3 +1,22 @@
+Overview of changes in 0.1.0
+============================
+
+* Rewrite Toolbox in Go
+* Add option --log-podman to regulate output of Podman
+* Add option --version to show current Toolbox version
+* Add better error handling
+* Fix duplication in the output of the list command
+* Make option --container in commands create and enter an argument
+* Make bash completion a bit more reliable
+* Make the create command abortable
+* Fix leaking of spinners when aborted
+* Replace option --verbose and --very-verbose with --log-level while keeping
+  verbose for backwards compatibility
+* Mark the reset command as deprecated (replaced by 'podman system reset')
+* Drop some no longer needed code
+* Update strings in several places (hints, errors, progress,..)
+
+
 Overview of changes in 0.0.18
 =============================
 
