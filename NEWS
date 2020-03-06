@@ -1,3 +1,31 @@
+Overview of changes in 0.1.0
+============================
+
+* Rewrite Toolbox in Go
+* Add option --log-podman to regulate output of Podman
+* Add option --version to show current Toolbox version
+* Add option --default to command run to make for a change in the API
+* Add option --notty to command run to disable usage of --tty + --interactive
+  flags in 'podman exec'
+* Add option --unsafe to command create
+* Add a test if $PWD is available in a container
+* Add better error handling
+* Add hidden command generate with generators useful when creating packages
+* Fix duplication in the output of the list command
+* Make option --container in commands create, run and enter an argument
+* Make bash completion a bit more reliable
+* Make init-container command more verbose about its actions.
+* Make most errors in init-container non-fatal
+* Make the create command abortable
+* Replace option --verbose and --very-verbose with --log-level while keeping
+  verbose for backwards compatibility
+* Completely rely on flatpak-session-helper in the init-container command
+* Remove the reset command
+* Restrict usage of Toolbox inside containers
+* Drop some no longer needed code
+* Update strings in several places (hints, errors, progress,..)
+
+
 Overview of changes in 0.0.18
 =============================
 
