@@ -145,7 +145,7 @@ func run(args []string) error {
 				containerName = fmt.Sprint(containers[0]["Names"])
 				logrus.Infof("Entering container %s instead", containerName)
 			} else {
-				logrus.Fatal("Specify a name of a container")
+				logrus.Fatal("Create a new container with 'toolbox create' or 'toolbox enter' an already existing container")
 			}
 		} else {
 			logrus.Fatalf("Container '%s' not found", containerName)
