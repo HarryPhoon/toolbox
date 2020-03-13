@@ -44,8 +44,8 @@ func init() {
 	rootCmd.AddCommand(rmiCmd)
 
 	flags := rmiCmd.Flags()
-	flags.BoolVarP(&rmiFlags.deleteAll, "all", "a", false, "Remove all toolbox containers")
-	flags.BoolVarP(&rmiFlags.forceDelete, "force", "f", false, "Force the removal of running and paused toolbox containers")
+	flags.BoolVarP(&rmiFlags.deleteAll, "all", "a", false, "Remove all toolbox images")
+	flags.BoolVarP(&rmiFlags.forceDelete, "force", "f", false, "Force the removal of used toolbox images")
 }
 
 func rmi(args []string) {
