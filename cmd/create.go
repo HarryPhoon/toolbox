@@ -39,6 +39,7 @@ var (
 	createFlags struct {
 		image   string
 		release string
+		unsafe  bool
 	}
 	ulimitHost               = []string{}
 	homeCanonical            = ""
@@ -94,6 +95,7 @@ func init() {
 	flags := createCmd.Flags()
 	flags.StringVarP(&createFlags.image, "image", "i", "", "Change the name of the base image used to create the toolbox container")
 	flags.StringVarP(&createFlags.release, "release", "r", "", "Create a toolbox container for a different operating system release than the host")
+	flags.BoolVar(&createFlags.unsafe, "unsafe", false, "Allow the use of a non-Toolbox-compliant image")
 
 	viper.SetDefault("DBUS_SYSTEM_BUS_ADDRESS", "unix:path=/var/run/dbus/system_bus_socket")
 }
@@ -152,11 +154,15 @@ func create(args []string) error {
 	// Check if the image is a Toolbox image
 	// FIXME: In the future this check will have to be done only for local images because for pulled images it can be done by inspecting their manifest before pulling them
 	if imageFound || imagePulled {
-		isToolboxImage, err := checkIfToolboxImage(imageName)
-		if !isToolboxImage {
-			logrus.Fatalf("Image '%s' is not a Toolbox image: %v", imageName, err)
+		if !createFlags.unsafe {
+			isToolboxImage, err := checkIfToolboxImage(imageName)
+			if !isToolboxImage {
+				logrus.Fatalf("Image '%s' is not a Toolbox image: %v", imageName, err)
+			}
+			logrus.Infof("Image '%s' is a Toolbox image", imageName)
+		} else {
+			logrus.Infof("Skipping check if image '%s' is a Toolbox image", imageName)
 		}
-		logrus.Infof("Image '%s' is a Toolbox image", imageName)
 	}
 
 	logrus.Info("Looking for group for sudo")
