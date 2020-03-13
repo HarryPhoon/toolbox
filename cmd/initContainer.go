@@ -105,34 +105,34 @@ func initContainer(args []string) {
 
 			err = mountBind("/run/host/run/libvirt", "/run/libvirt", "")
 			if err != nil {
-				logrus.Fatal(err)
+				logrus.Error(err)
 			}
 
 			err = mountBind("/run/host/run/systemd/journal", "/run/systemd/journal", "")
 			if err != nil {
-				logrus.Fatal(err)
+				logrus.Error(err)
 			}
 
 			if utils.PathExists("/sys/fs/selinux") {
 				err = mountBind("/usr/share/empty", "/sys/fs/selinux", "")
 				if err != nil {
-					logrus.Fatal(err)
+					logrus.Error(err)
 				}
 			}
 
 			err = mountBind("/run/host/var/lib/flatpak", "/var/lib/flatpak", "ro")
 			if err != nil {
-				logrus.Fatal(err)
+				logrus.Error(err)
 			}
 
 			err = mountBind("/run/host/var/log/journal", "/var/log/journal", "ro")
 			if err != nil {
-				logrus.Fatal(err)
+				logrus.Error(err)
 			}
 
 			err = mountBind("/run/host/var/mnt", "/var/mnt", "rslave")
 			if err != nil {
-				logrus.Fatal(err)
+				logrus.Error(err)
 			}
 		}
 
@@ -143,7 +143,7 @@ func initContainer(args []string) {
 			if err != nil || localtimeTarget != "/run/host/monitor/localtime" {
 				err = redirectPath("/run/host/monitor/localtime", "/etc/localtime", false)
 				if err != nil {
-					logrus.Fatal(err)
+					logrus.Error(err)
 				}
 			}
 
@@ -151,7 +151,7 @@ func initContainer(args []string) {
 			if err != nil || timezoneTarget != "/run/host/monitor/timezone" {
 				err = redirectPath("/run/host/monitor/timezone", "/etc/timezone", false)
 				if err != nil {
-					logrus.Fatal(err)
+					logrus.Error(err)
 				}
 			}
 
@@ -159,7 +159,7 @@ func initContainer(args []string) {
 			if err != nil || hostconfTarget != "/run/host/monitor/host.conf" {
 				err = redirectPath("/run/host/monitor/host.conf", "/etc/host.conf", false)
 				if err != nil {
-					logrus.Fatal(err)
+					logrus.Error(err)
 				}
 			}
 
@@ -167,7 +167,7 @@ func initContainer(args []string) {
 			if err != nil || hostsTarget != "/run/host/monitor/hosts" {
 				err = redirectPath("/run/host/monitor/hosts", "/etc/hosts", false)
 				if err != nil {
-					logrus.Fatal(err)
+					logrus.Error(err)
 				}
 			}
 
@@ -175,7 +175,7 @@ func initContainer(args []string) {
 			if err != nil || resolvconfTarget != "/run/host/monitor/resolv.conf" {
 				err = redirectPath("/run/host/monitor/resolv.conf", "/etc/resolv.conf", false)
 				if err != nil {
-					logrus.Fatal(err)
+					logrus.Error(err)
 				}
 			}
 		}
@@ -185,7 +185,7 @@ func initContainer(args []string) {
 		if _, err := os.Readlink("/media"); err != nil {
 			err = redirectPath("/run/media", "/media", true)
 			if err != nil {
-				logrus.Fatal(err)
+				logrus.Error(err)
 			}
 		}
 	}
@@ -194,7 +194,7 @@ func initContainer(args []string) {
 		if _, err = os.Readlink("/mnt"); err != nil {
 			err = redirectPath("/run/mnt", "/mnt", true)
 			if err != nil {
-				logrus.Fatal(err)
+				logrus.Error(err)
 			}
 		}
 	}
@@ -204,7 +204,7 @@ func initContainer(args []string) {
 		if initContFlags.homeLink {
 			err = redirectPath("/var/home", "/home", true)
 			if err != nil {
-				logrus.Fatal(err)
+				logrus.Error(err)
 			}
 		}
 
@@ -227,24 +227,21 @@ func initContainer(args []string) {
 		err = useraddCmd.Run()
 		if err != nil {
 			logrus.Debugf("Arguments passed to 'useradd': %v", args)
-			logrus.Debug(err)
-			logrus.Fatalf("Failed to add user %s with UID %d", initContFlags.user, initContFlags.uid)
+			logrus.Fatalf("Failed to add user %s with UID %d: %v", initContFlags.user, initContFlags.uid, err)
 		}
 
 		logrus.Infof("Removing password for user %s", initContFlags.user)
 		passwdCmd := exec.Command("passwd", []string{"--delete", initContFlags.user}...)
 		err = passwdCmd.Run()
 		if err != nil {
-			logrus.Debug(err)
-			logrus.Fatalf("Failed to remove password for user %s", initContFlags.user)
+			logrus.Fatalf("Failed to remove password for user %s: %v", initContFlags.user, err)
 		}
 
 		logrus.Info("Removing password for user root")
 		passwdCmd = exec.Command("passwd", []string{"--delete", "root"}...)
 		err = passwdCmd.Run()
 		if err != nil {
-			logrus.Debug(err)
-			logrus.Fatal("Failed to remove password for root")
+			logrus.Fatalf("Failed to remove password for root: %v", err)
 		}
 	}
 
@@ -253,14 +250,13 @@ func initContainer(args []string) {
 
 		file, err := os.OpenFile("/etc/krb5.conf.d/kcm_default_ccache", os.O_APPEND|os.O_CREATE|os.O_RDWR, 0644)
 		if err != nil {
-			logrus.Debug(err)
-			logrus.Fatal("Failed to open file /etc/krb5.conf.d/kcm_default_ccache")
+			logrus.Errorf("Failed to open file /etc/krb5.conf.d/kcm_default_ccache: %v", err)
 		}
 
 		defer file.Close()
 
 		text := `# Written by Toolbox
-# https://github.com/debarshiray/toolbox
+# https://github.com/containers/toolbox
 #
 # # To disable the KCM credential cache, comment out the following lines.
 
@@ -268,34 +264,30 @@ func initContainer(args []string) {
     default_ccache_name = KCM:`
 
 		if _, err = file.WriteString(text); err != nil {
-			logrus.Debug(err)
-			logrus.Fatal("Failed to set KCM as the defult Kerberos credential cache")
+			logrus.Errorf("Failed to set KCM as the defult Kerberos credential cache: %v", err)
 		}
 	}
 
 	logrus.Infof("Creating runtime directory %s", toolboxRuntimeDirectory)
 	err = os.MkdirAll(toolboxRuntimeDirectory, 0700)
 	if err != nil {
-		logrus.Debug(err)
-		logrus.Fatalf("Failed to create runtime directory %s", toolboxRuntimeDirectory)
+		logrus.Fatalf("Failed to create runtime directory %s: %v", toolboxRuntimeDirectory, err)
 	}
 
 	err = os.Chown(toolboxRuntimeDirectory, initContFlags.uid, initContFlags.uid)
 	if err != nil {
-		logrus.Debug(err)
-		logrus.Fatal("Could not change ownership of the runtime directory")
+		logrus.Fatalf("Could not change ownership of the runtime directory: %v", err)
 	}
 
 	logrus.Infof("Creating initialization stamp %s", containerInitializedStamp)
 	_, err = os.Create(containerInitializedStamp)
 	if err != nil {
-		logrus.Fatal("Failed to create initialization stamp")
+		logrus.Fatalf("Failed to create initialization stamp: %v", err)
 	}
 
 	err = os.Chown(containerInitializedStamp, initContFlags.uid, initContFlags.uid)
 	if err != nil {
-		logrus.Debug(err)
-		logrus.Fatal("Could not change ownership of the initialization stamp")
+		logrus.Fatalf("Could not change ownership of the initialization stamp: %v", err)
 	}
 
 	logrus.Info("Finished initializing container")
