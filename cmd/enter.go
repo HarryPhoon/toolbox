@@ -40,7 +40,7 @@ var enterCmd = &cobra.Command{
 		if len(args) != 0 {
 			containerName = args[0]
 		}
-		containerName, _ = utils.UpdateContainerAndImageNames(containerName, "", enterFlags.releaseVersion)
+		containerName, _, _ = utils.UpdateContainerAndImageNames(containerName, "", enterFlags.releaseVersion)
 
 		args = []string{containerName, viper.GetString("SHELL")}
 		run(args)

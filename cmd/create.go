@@ -100,6 +100,8 @@ func init() {
 
 func create(args []string) error {
 	containerName := ""
+	imageName := ""
+	imageDomain := ""
 
 	if len(args) != 0 {
 		containerName = args[0]
@@ -110,102 +112,50 @@ func create(args []string) error {
 	}
 
 	// Toolbox should work even when some options are not specified. This is where the default values are defined and existing standardized.
-	containerName, imageName := utils.UpdateContainerAndImageNames(containerName, createFlags.image, createFlags.release)
+	containerName, imageName, imageDomain = utils.UpdateContainerAndImageNames(containerName, createFlags.image, createFlags.release)
+
+	// Currently Toolbox only trusts one registry: registry.fedoraproject.org
+	// But if the provided image name already has a domain then Toolbox will use it
+	fullImageName := ""
+	if imageDomain == "" {
+		fullImageName = fmt.Sprintf("registry.fedoraproject.org/%s", imageName)
+	} else {
+		fullImageName = fmt.Sprintf("%s/%s", imageDomain, imageName)
+	}
 
 	logrus.Infof("Checking if container %s already exists", containerName)
 	if podman.ContainerExists(containerName) {
 		logrus.Fatalf("Container %s already exists", containerName)
 	}
-	logrus.Infof("Used image will be: %s", imageName)
+
+	logrus.Infof("Used image will be: %s", fullImageName)
 
 	// Look for the toolbox image on local machine
 	imageFound := findLocalToolboxImage(imageName)
+
 	imagePulled := false
-
 	if !imageFound {
-		logrus.Infof("Image '%s' was not found", imageName)
-
-		// Currently Toolbox only trusts one registry: registry.fedoraproject.org
-		imageName = fmt.Sprintf("registry.fedoraproject.org/%s", imageName)
-
-		pullImage := false
-
-		if !rootFlags.assumeyes {
-			response := ""
-			fmt.Println("Image required to create toolbox container.")
-			fmt.Printf("Do you want to pull %s (+-200MB)? [y/N]: ", imageName)
-			fmt.Scanf("%s", &response)
-			response = strings.ToLower(response)
-			if response == "y" || response == "yes" {
-				pullImage = true
-			}
-		} else {
-			pullImage = true
-		}
-
-		if pullImage {
-			s := spinner.New(spinner.CharSets[9], 500*time.Millisecond)
-			// The spinner doesn't have to be used when log output is showed
-			if !viper.GetBool("log-podman") {
-				s.Prefix = fmt.Sprintf("Pulling %s ", imageName)
-				s.Writer = os.Stderr
-				s.Start()
-			}
-
-			var err error
-			for true {
-				err = podman.PullImage(imageName)
-				if err != nil {
-					if errors.Is(err, podman.ErrServiceUnavailable) {
-						logrus.Debug("Received Service Unavailable error. Trying again to pull the image.")
-						time.Sleep(200 * time.Millisecond)
-						continue
-					}
-					err = fmt.Errorf("Failed to pull '%s': %v", imageName, err)
-				}
-				break
-			}
-
-			if !viper.GetBool("log-podman") {
-				s.Stop()
-			}
-
+		logrus.Infof("Image '%s' was not found on the host machine", imageName)
+		imagePulled, err := pullToolboxImage(fullImageName)
+		if !imagePulled {
 			if err != nil {
-				logrus.Fatal(err)
+				logrus.Fatalf("Failed to pull image: %v", err)
 			}
-
-			imagePulled = true
-		} else {
-			return nil
+			// If the image was not pulled but there is no error then the user said no to pulling an image
+			os.Exit(0)
 		}
-
-		logrus.Infof("Image '%s was pulled", imageName)
+		logrus.Infof("Image '%s was pulled", fullImageName)
 	} else {
-		logrus.Infof("Image '%s' was found", imageName)
+		logrus.Infof("Image '%s' was found", fullImageName)
 	}
 
 	// Check if the image is a Toolbox image
 	// FIXME: In the future this check will have to be done only for local images because for pulled images it can be done by inspecting their manifest before pulling them
 	if imageFound || imagePulled {
-		logrus.Infof("Checking if '%s' is a Toolbox image", imageName)
-		inspectInfo, err := podman.PodmanInspect("image", imageName)
-		if err != nil {
-			logrus.Fatalf("Unable to inspect image '%s'", imageName)
-		}
-		imageLabels := inspectInfo["Labels"].(map[string]interface{})
-
-		isToolboxImage := false
-		if imageLabels["com.github.debarshiray.toolbox"] == "true" {
-			isToolboxImage = true
-		}
-		if imageLabels["com.github.containers.toolbox"] == "true" {
-			isToolboxImage = true
-		}
-
+		isToolboxImage, err := checkIfToolboxImage(imageName)
 		if !isToolboxImage {
-			logrus.Fatalf("Image '%s' is not a Toolbox image", imageName)
+			logrus.Fatalf("Image '%s' is not a Toolbox image: %v", imageName, err)
 		}
-
 		logrus.Infof("Image '%s' is a Toolbox image", imageName)
 	}
 
@@ -455,4 +405,79 @@ func findLocalToolboxImage(imageName string) bool {
 	}
 
 	return false
+}
+
+func checkIfToolboxImage(imageName string) (bool, error) {
+	logrus.Infof("Checking if '%s' is a Toolbox image", imageName)
+	inspectInfo, err := podman.PodmanInspect("image", imageName)
+	if err != nil {
+		return false, errors.New("Unable to inspect image")
+	}
+	var imageLabels map[string]interface{}
+	if inspectInfo["Labels"] == nil {
+		return false, errors.New("Image does not have labels at all")
+	}
+
+	imageLabels = inspectInfo["Labels"].(map[string]interface{})
+	isToolboxImage := false
+	if imageLabels["com.github.debarshiray.toolbox"] == "true" {
+		isToolboxImage = true
+	}
+	if imageLabels["com.github.containers.toolbox"] == "true" {
+		isToolboxImage = true
+	}
+
+	if !isToolboxImage {
+		return false, errors.New("Image does not have the right labels")
+	}
+
+	return true, nil
+}
+
+func pullToolboxImage(fullImageName string) (bool, error) {
+	pullImage := false
+	imagePulled := false
+
+	if !rootFlags.assumeyes {
+		response := ""
+		fmt.Println("Image required to create toolbox container.")
+		fmt.Printf("Do you want to pull %s (+-200MB)? [y/N]: ", fullImageName)
+		fmt.Scanf("%s", &response)
+		response = strings.ToLower(response)
+		if response == "y" || response == "yes" {
+			pullImage = true
+		}
+	} else {
+		pullImage = true
+	}
+
+	if pullImage {
+		s := spinner.New(spinner.CharSets[9], 500*time.Millisecond)
+		s.Prefix = fmt.Sprintf("Pulling %s ", fullImageName)
+		s.Writer = os.Stderr
+		s.Start()
+		defer s.Stop()
+
+		retries := 0
+		for ; retries < 4; retries++ {
+			err := podman.PullImage(fullImageName)
+			if err != nil {
+				if errors.Is(err, podman.ErrServiceUnavailable) {
+					logrus.Debug("Received Service Unavailable error. Trying again to pull the image.")
+					time.Sleep(200 * time.Millisecond)
+					continue
+				}
+				return false, err
+			}
+			break
+		}
+
+		if retries == 3 && !imagePulled {
+			return false, errors.New("Received Service Unavailable 3 times")
+		}
+
+		return true, nil
+	}
+
+	return false, nil
 }

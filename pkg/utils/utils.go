@@ -154,7 +154,8 @@ func PathExists(path string) bool {
 // If no container name is specified then the name of the image will be used.
 //
 // If the host system is unknown then the base image will be 'fedora-toolbox' with a default version
-func UpdateContainerAndImageNames(containerName string, imageName string, release string) (string, string) {
+func UpdateContainerAndImageNames(containerName string, imageName string, release string) (string, string, string) {
+	imageDomain := ""
 	hostPlatform := GetHostPlatform()
 
 	if release == "" {
@@ -177,14 +178,19 @@ func UpdateContainerAndImageNames(containerName string, imageName string, releas
 	} else {
 		// If the image name for fedora toolbox does not have the parent defined (eg. f31/ for
 		// fedora-toolbox:31) then add it here.
-		reg, err := regexp.Compile("^fedora-toolbox:[1-9]{1}[0-9]*")
-		if err == nil {
-			if reg.MatchString(imageName) {
+		matched, err := regexp.MatchString("^fedora-toolbox:[1-9]{1}[0-9]*", imageName)
+		if err != nil {
+			logrus.Errorf("There was an error while running regexp: %v", err)
+		} else {
+			if matched {
 				imageNameParts := strings.SplitN(imageName, ":", 2)
 				imageName = fmt.Sprintf("f%s/%s:%s", imageNameParts[1], imageNameParts[0], imageNameParts[1])
 			}
-		} else {
-			logrus.Debug(err)
+		}
+		if ReferenceHasDomain(imageName) {
+			nameSplit := strings.Split(imageName, "/")
+			imageName = nameSplit[len(nameSplit)-1]
+			imageDomain = strings.Join(nameSplit[:len(nameSplit)-1], "/")
 		}
 	}
 
@@ -197,7 +203,7 @@ func UpdateContainerAndImageNames(containerName string, imageName string, releas
 		}
 	}
 
-	return containerName, imageName
+	return containerName, imageName, imageDomain
 }
 
 // IsContainerNameValid checks if the name of a container matches the right pattern

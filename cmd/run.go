@@ -97,7 +97,7 @@ func run(args []string) error {
 		commands = args[1:]
 	}
 
-	containerName, imageName = utils.UpdateContainerAndImageNames(containerName, imageName, runFlags.releaseVersion)
+	containerName, imageName, _ = utils.UpdateContainerAndImageNames(containerName, imageName, runFlags.releaseVersion)
 
 	logrus.Debugf("Container: '%s' Image: '%s'", containerName, imageName)
 
