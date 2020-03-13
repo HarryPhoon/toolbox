@@ -133,7 +133,7 @@ func ReferenceHasDomain(text string) bool {
 	}
 
 	// A domain should contain a top level domain name. An exception is 'localhost'
-	if strings.ContainsAny(text[:i], ".:") && text[:i] != "localhost" {
+	if !strings.ContainsAny(text[:i], ".:") && text[:i] != "localhost" {
 		return false
 	}
 
