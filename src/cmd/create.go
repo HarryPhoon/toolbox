@@ -386,6 +386,7 @@ func create(args []string) error {
 		logrus.Fatalf("Failed to create container %s", containerName)
 	}
 
+	fmt.Printf("Created container: %s\n", containerName)
 	fmt.Printf("Enter with: toolbox enter %s\n", containerName)
 
 	return nil
