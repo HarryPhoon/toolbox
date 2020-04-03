@@ -4,17 +4,17 @@
     - name: Build toolbox
       command: go build
       args:
-        chdir: '{{ zuul.project.src_dir }}'
+        chdir: '{{ zuul.project.src_dir }}/src'
 
     - name: Show the content of the source folder
       command: ls
       args:
-        chdir: '{{ zuul.project.src_dir }}'
+        chdir: '{{ zuul.project.src_dir }}/src'
 
     - name: Run system tests
-      command: bats ./test/system
+      command: bats ../test/system
       environment:
         PODMAN: '/usr/bin/podman'
         TOOLBOX: './toolbox'
       args:
-        chdir: '{{ zuul.project.src_dir }}'
+        chdir: '{{ zuul.project.src_dir }}/src'

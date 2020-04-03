@@ -79,13 +79,15 @@ To build the project you need to have [Go](https://golang.org/) installed on you
 
 ```
 $ git clone git@github.com:containers/toolbox.git / https://github.com/containers/toolbox.git
-$ cd toolbox
+$ cd toolbox/src
 $ go build
 ```
 
 That's it! Go should pull and build all the necessarry dependencies and build the binary.
 
 **To install Toolbox:**
+
+While in the /src directory:
 
 ```
 go install
