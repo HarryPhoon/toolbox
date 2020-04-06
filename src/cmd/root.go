@@ -23,7 +23,6 @@ import (
 
 	"github.com/containers/toolbox/pkg/podman"
 	"github.com/containers/toolbox/pkg/version"
-	"github.com/mitchellh/go-homedir"
 
 	"github.com/containers/toolbox/pkg/utils"
 	"github.com/spf13/cobra"
@@ -128,7 +127,7 @@ func initConfig() {
 		viper.SetConfigFile(cfgFile)
 	} else {
 		// Find home directory.
-		home, err := homedir.Dir()
+		home, err := os.UserHomeDir()
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
