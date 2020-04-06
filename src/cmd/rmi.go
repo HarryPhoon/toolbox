@@ -64,16 +64,22 @@ func rmi(args []string) {
 			logrus.Fatal(err)
 		}
 
-		images := utils.JoinJSON("id", Dimages, Cimages)
+		var idKey string
+		if podman.CheckVersion("1.8.2") < 0 {
+			idKey = "ID"
+		} else {
+			idKey = "id"
+		}
+		images := utils.JoinJSON(idKey, Dimages, Cimages)
 		for _, image := range images {
-			logrus.Infof("Deleting image %s", image["id"].(string))
-			err = removeImage(image["id"].(string))
+			logrus.Infof("Deleting image %s", image[idKey].(string))
+			err = removeImage(image[idKey].(string))
 			if err != nil {
 				if errors.As(err, &podman.ErrHasChildren) {
-					logrus.Errorf("Image '%s' has dependent children", image["id"])
+					logrus.Errorf("Image '%s' has dependent children", image[idKey])
 				}
 				if errors.As(err, &podman.ErrNonExistent) {
-					logrus.Errorf("Image '%s' does not exist", image["id"].(string))
+					logrus.Errorf("Image '%s' does not exist", image[idKey].(string))
 				}
 				logrus.Error("Internal Podman error: %w", err)
 			}

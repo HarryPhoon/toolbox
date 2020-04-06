@@ -120,8 +120,14 @@ func GetImages() ([]map[string]interface{}, error) {
 		logrus.Error(err)
 	}
 
-	images := utils.JoinJSON("id", Dimages, Cimages)
-	images = utils.SortJSON(images, "names", true)
+	var images []map[string]interface{}
+	if podman.CheckVersion("1.8.2") < 0 {
+		images = utils.JoinJSON("ID", Dimages, Cimages)
+		images = utils.SortJSON(images, "Names", true)
+	} else {
+		images = utils.JoinJSON("id", Dimages, Cimages)
+		images = utils.SortJSON(images, "names", true)
+	}
 
 	return images, err
 }
@@ -131,10 +137,20 @@ func outputList(images, containers []map[string]interface{}) error {
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 		fmt.Fprintf(w, "%s\t%s\t%s\n", "IMAGE ID", "IMAGE NAME", "CREATED")
 
+		var idKey, nameKey, createdKey string
+		if podman.CheckVersion("1.8.2") < 0 {
+			idKey = "ID"
+			nameKey = "Names"
+			createdKey = "Created"
+		} else {
+			idKey = "id"
+			nameKey = "names"
+			createdKey = "created"
+		}
 		for _, image := range images {
-			id := utils.ShortID(image["id"].(string))
-			name := image["names"].([]interface{})[0].(string)
-			created := image["created"].(string)
+			id := utils.ShortID(image[idKey].(string))
+			name := image[nameKey].([]interface{})[0].(string)
+			created := image[createdKey].(string)
 			fmt.Fprintf(w, "%s\t%s\t%s\n", id, name, created)
 		}
 		w.Flush()
