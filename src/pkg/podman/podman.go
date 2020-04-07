@@ -9,7 +9,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/mcuadros/go-version"
+	"github.com/HarryMichal/go-version"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -51,16 +51,16 @@ func IsPathBindMount(path string, containerInfo map[string]interface{}) bool {
 //
 // Takes in one string parameter that should be in the format that is used for versioning (eg. 1.0.0, 2.5.1-dev).
 //
-// Returns 0 if provided version equals Podman version
-// Returns 1 if provided version is bigger than Podman version
-// Returns -1 if provided version is lower than Podman version
+// Returns 0 if required version equals Podman version
+// Returns 1 if required version is higher than Podman version
+// Returns -1 if required version is lower than Podman version
 func CheckVersion(requiredVersion string) int {
 	podmanVersion, _ := GetVersion()
 
 	podmanVersion = version.Normalize(podmanVersion)
 	requiredVersion = version.Normalize(requiredVersion)
 
-	return version.CompareSimple(podmanVersion, requiredVersion)
+	return version.CompareSimple(requiredVersion, podmanVersion)
 }
 
 // GetVersion returns version of Podman in a string

@@ -3,6 +3,7 @@ module github.com/containers/toolbox
 go 1.13
 
 require (
+	github.com/HarryMichal/go-version v1.0.0
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
 	github.com/briandowns/spinner v1.9.0
 	github.com/cpuguy83/go-md2man/v2 v2.0.0
@@ -11,7 +12,6 @@ require (
 	github.com/godbus/dbus/v5 v5.0.3
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/mattn/go-colorable v0.1.6 // indirect
-	github.com/mcuadros/go-version v0.0.0-20190830083331-035f6764e8d2
 	github.com/pelletier/go-toml v1.6.0 // indirect
 	github.com/shirou/gopsutil v2.20.2+incompatible
 	github.com/sirupsen/logrus v1.4.2
