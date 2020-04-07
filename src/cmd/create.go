@@ -190,11 +190,6 @@ func createContainer(container, image, release string, showCommandToEnter bool) 
 	toolboxPathEnvArg := "TOOLBOX_PATH=" + toolboxPath
 	toolboxPathMountArg := toolboxPath + ":/usr/bin/toolbox:ro"
 
-	sudoGroup, err := utils.GetGroupForSudo()
-	if err != nil {
-		return err
-	}
-
 	logrus.Debug("Checking if 'podman create' supports '--ulimit host'")
 
 	var ulimitHost []string
@@ -338,7 +333,6 @@ func createContainer(container, image, release string, showCommandToEnter bool) 
 		"create",
 		"--dns", "none",
 		"--env", toolboxPathEnvArg,
-		"--group-add", sudoGroup,
 		"--hostname", "toolbox",
 		"--ipc", "host",
 		"--label", "com.github.containers.toolbox=true",
