@@ -139,7 +139,8 @@ func run(args []string) error {
 				}
 
 				if !createContainer {
-					logrus.Fatal("A container can be created later with the 'create' command.")
+					fmt.Println("A container can be created later with the 'create' command")
+					return nil
 				}
 
 				create([]string{containerName})
