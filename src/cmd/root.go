@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/containers/toolbox/pkg/podman"
 	"github.com/containers/toolbox/pkg/version"
@@ -189,13 +190,14 @@ func migrate() error {
 		return fmt.Errorf("Configuration directory not created: %w", err)
 	}
 
-	output, err := ioutil.ReadFile(migrateStampPath)
+	migrateStampBytes, err := ioutil.ReadFile(migrateStampPath)
 	if err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("Could not read file '%s': %w", migrateStampPath, err)
 		}
 	}
-	podmanVersionOld := string(output)
+	migrateStampString := string(migrateStampBytes)
+	podmanVersionOld := strings.TrimSpace(migrateStampString)
 
 	if podmanVersionOld != "" {
 		logrus.Debugf("Old Podman version is %s", podmanVersionOld)
