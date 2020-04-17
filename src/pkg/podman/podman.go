@@ -75,7 +75,14 @@ func GetVersion() (string, error) {
 		return "", err
 	}
 
-	podmanVersion := jsonoutput["Client"].(map[string]interface{})["Version"].(string)
+	var podmanVersion string
+	podmanClientInfoInterface := jsonoutput["Client"]
+	switch podmanClientInfo := podmanClientInfoInterface.(type) {
+	case nil:
+		podmanVersion = jsonoutput["Version"].(string)
+	case map[string]interface{}:
+		podmanVersion = podmanClientInfo["Version"].(string)
+	}
 	return podmanVersion, nil
 }
 
