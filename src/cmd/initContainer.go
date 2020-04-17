@@ -50,8 +50,8 @@ var initContainerCmd = &cobra.Command{
 			logrus.Fatal("The 'init-container' command can only be used inside containers")
 		}
 	},
-	Run: func(cmd *cobra.Command, args []string) {
-		initContainer(args)
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return initContainer(args)
 	},
 }
 
@@ -74,7 +74,7 @@ func init() {
 	initContainerCmd.MarkFlagRequired("user")
 }
 
-func initContainer(args []string) {
+func initContainer(args []string) error {
 	if viper.GetString("XDG_RUNTIME_DIR") == "" {
 		logrus.Info("XDG_RUNTIME_DIR is unset")
 
@@ -297,6 +297,8 @@ func initContainer(args []string) {
 	for range t.C {
 		time.Sleep(time.Second)
 	}
+
+  return nil
 }
 
 func redirectPath(source string, target string, folder bool) error {

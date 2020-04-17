@@ -35,8 +35,8 @@ var listFlags struct {
 var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List existing toolbox containers and images",
-	Run: func(cmd *cobra.Command, args []string) {
-		list(cmd, args)
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return list(cmd, args)
 	},
 }
 

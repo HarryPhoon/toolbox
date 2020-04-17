@@ -35,8 +35,8 @@ var (
 var rmiCmd = &cobra.Command{
 	Use:   "rmi",
 	Short: "Remove one or more toolbox images",
-	Run: func(cmd *cobra.Command, args []string) {
-		rmi(args)
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return rmi(args)
 	},
 }
 
@@ -48,7 +48,7 @@ func init() {
 	flags.BoolVarP(&rmiFlags.forceDelete, "force", "f", false, "Force the removal of used toolbox images")
 }
 
-func rmi(args []string) {
+func rmi(args []string) error {
 	if rmiFlags.deleteAll {
 		logrus.Info("Fetching images with label=com.github.debarshiray.toolbox=true")
 		args := []string{"--filter", "label=com.github.debarshiray.toolbox=true"}
@@ -132,6 +132,7 @@ func rmi(args []string) {
 			}
 		}
 	}
+	return nil
 }
 
 func removeImage(image string) error {

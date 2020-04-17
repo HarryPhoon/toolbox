@@ -35,8 +35,8 @@ var (
 var rmCmd = &cobra.Command{
 	Use:   "rm [CONTAINER...]",
 	Short: "Remove one or more toolbox containers",
-	Run: func(cmd *cobra.Command, args []string) {
-		rm(args)
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return rm(args)
 	},
 }
 
@@ -126,8 +126,7 @@ func rm(args []string) error {
 			}
 		}
 	}
-
-	return nil
+  return nil
 }
 
 func removeContainer(containerName string) error {

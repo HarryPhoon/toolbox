@@ -35,7 +35,7 @@ var enterCmd = &cobra.Command{
 		runFlags.pedantic = false
 		runFlags.emitEscapeSequence = true
 	},
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		var containerName string = ""
 		if len(args) != 0 {
 			containerName = args[0]
@@ -43,7 +43,7 @@ var enterCmd = &cobra.Command{
 		containerName, _, _ = utils.UpdateContainerAndImageNames(containerName, "", enterFlags.releaseVersion)
 
 		args = []string{containerName, viper.GetString("SHELL")}
-		run(args)
+		return run(args)
 	},
 	Args: cobra.MaximumNArgs(1),
 }

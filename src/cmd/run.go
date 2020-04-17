@@ -45,8 +45,8 @@ var (
 var runCmd = &cobra.Command{
 	Use:   "run [flags] CONTAINER [COMMAND [ARG...]]",
 	Short: "Run a command in an existing toolbox container",
-	Run: func(cmd *cobra.Command, args []string) {
-		run(args)
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return run(args)
 	},
 }
 

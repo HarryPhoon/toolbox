@@ -83,8 +83,8 @@ var (
 var createCmd = &cobra.Command{
 	Use:   "create [flags] NAME",
 	Short: "Create a new toolbox container",
-	Run: func(cmd *cobra.Command, args []string) {
-		create(args)
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return create(args)
 	},
 	Args: cobra.MaximumNArgs(1),
 }
