@@ -300,7 +300,7 @@ func containerStart(containerName string) error {
 		if strings.Contains(string(output), "use system migrate to mitigate") {
 			logrus.Info("Checking if 'podman system migrate' support '--new-runtime' option")
 
-			if podman.CheckVersion("1.6.2") > 0 {
+			if !podman.CheckVersion("1.6.2") {
 				return errors.New("Podman doesn't support --new-runtime option")
 			}
 

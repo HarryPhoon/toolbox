@@ -65,10 +65,10 @@ func rmi(args []string) error {
 		}
 
 		var idKey string
-		if podman.CheckVersion("1.8.2") < 0 {
-			idKey = "ID"
-		} else {
+		if !podman.CheckVersion("1.8.3") {
 			idKey = "id"
+		} else {
+			idKey = "ID"
 		}
 		images := utils.JoinJSON(idKey, Dimages, Cimages)
 		for _, image := range images {

@@ -199,22 +199,24 @@ func migrate() error {
 
 	if podmanVersionOld != "" {
 		logrus.Debugf("Old Podman version is %s", podmanVersionOld)
-		versionComp := podman.CheckVersion(podmanVersionOld)
-		if versionComp == 0 {
+
+		if podmanVersion == podmanVersionOld {
 			logrus.Debugf("Migration not needed: Podman version %s is unchanged", podmanVersion)
 			return nil
-		} else if versionComp > 0 {
+		}
+
+		if !podman.CheckVersion(podmanVersionOld) {
 			logrus.Debugf("Migration not needed: Podman version %s is old", podmanVersion)
 			return nil
-		} else {
-			logrus.Debugf("Migration needed: Podman version %s is new", podmanVersion)
-			err = podman.CmdRun("system", "migrate")
-			if err != nil {
-				return fmt.Errorf("Unable to migrate containers: %w", err)
-			}
-			logrus.Debugf("Migration to Podman version %s was ok", podmanVersion)
 		}
 	}
+
+	logrus.Debugf("Migration needed: Podman version %s is new", podmanVersion)
+	err = podman.CmdRun("system", "migrate")
+	if err != nil {
+		return fmt.Errorf("Unable to migrate containers: %w", err)
+	}
+	logrus.Debugf("Migration to Podman version %s was ok", podmanVersion)
 
 	logrus.Infof("Updating Podman version in '%s'", migrateStampPath)
 	err = ioutil.WriteFile(migrateStampPath, []byte(podmanVersion), 0664)

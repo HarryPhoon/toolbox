@@ -121,12 +121,12 @@ func GetImages() ([]map[string]interface{}, error) {
 	}
 
 	var images []map[string]interface{}
-	if podman.CheckVersion("1.8.2") < 0 {
-		images = utils.JoinJSON("ID", Dimages, Cimages)
-		images = utils.SortJSON(images, "Names", true)
-	} else {
+	if !podman.CheckVersion("1.8.3") {
 		images = utils.JoinJSON("id", Dimages, Cimages)
 		images = utils.SortJSON(images, "names", true)
+	} else {
+		images = utils.JoinJSON("ID", Dimages, Cimages)
+		images = utils.SortJSON(images, "Names", true)
 	}
 
 	return images, err
@@ -138,14 +138,14 @@ func outputList(images, containers []map[string]interface{}) error {
 		fmt.Fprintf(w, "%s\t%s\t%s\n", "IMAGE ID", "IMAGE NAME", "CREATED")
 
 		var idKey, nameKey, createdKey string
-		if podman.CheckVersion("1.8.2") < 0 {
-			idKey = "ID"
-			nameKey = "Names"
-			createdKey = "Created"
-		} else {
+		if !podman.CheckVersion("1.8.3") {
 			idKey = "id"
 			nameKey = "names"
 			createdKey = "created"
+		} else {
+			idKey = "ID"
+			nameKey = "Names"
+			createdKey = "Created"
 		}
 		for _, image := range images {
 			id := utils.ShortID(image[idKey].(string))

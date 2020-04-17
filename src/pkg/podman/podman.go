@@ -51,16 +51,14 @@ func IsPathBindMount(path string, containerInfo map[string]interface{}) bool {
 //
 // Takes in one string parameter that should be in the format that is used for versioning (eg. 1.0.0, 2.5.1-dev).
 //
-// Returns 0 if required version equals Podman version
-// Returns 1 if required version is higher than Podman version
-// Returns -1 if required version is lower than Podman version
-func CheckVersion(requiredVersion string) int {
+// Returns true if the Podman version is equal to or higher than the required version.
+func CheckVersion(requiredVersion string) bool {
 	podmanVersion, _ := GetVersion()
 
 	podmanVersion = version.Normalize(podmanVersion)
 	requiredVersion = version.Normalize(requiredVersion)
 
-	return version.CompareSimple(requiredVersion, podmanVersion)
+	return version.CompareSimple(podmanVersion, requiredVersion) >= 0
 }
 
 // GetVersion returns version of Podman in a string
