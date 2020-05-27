@@ -23,6 +23,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -397,22 +398,81 @@ func mountBind(containerPath, source, flags string) error {
 	return nil
 }
 
+// redirectPath serves for creating symlinks for mainly crucial system files to
+// their counterparts on the host's filesystem.
+//
+// containerPath and target must be absolute paths
+//
+// folder signifies the target is a folder
+//
+// The files of the host's filesystem are available in a toolbox containers
+// under /run/host.
+//
+// If the target is a symlink, redirectPath will follow the chain of links and
+// try to lookup the real target in /run/host
+//
+// Example: systemd-resolved makes /etc/resolv.conf a link to
+// /run/systemd/resolved/resolv.conf - in a container found under
+// /run/host/run/systemd/resolved/resolv.conf).
 func redirectPath(containerPath, target string, folder bool) error {
 	logrus.Debugf("Redirecting %s to %s", containerPath, target)
 
-	err := os.Remove(containerPath)
+	targetInfo, err := os.Lstat(target)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("target %s was not found in the container", target)
+		}
+		return fmt.Errorf("failed to lstat %s: %w", target, err)
+	}
+	isSymlink := (targetInfo.Mode() & os.ModeSymlink) != 0
+
+	// If the target is a link, follow the chain. If needed, repeat the process.
+	for isSymlink {
+		logrus.Debugf("Path %s is a symlink. Resolving.", target)
+		newTarget, err := os.Readlink(target)
+		if err != nil {
+			return fmt.Errorf("Could not read link %s: %w", target, err)
+		}
+
+		if !filepath.IsAbs(newTarget) {
+			newTarget = filepath.Join(filepath.Dir(target), newTarget)
+		}
+		// Only prepend /run/host to the filepath if it is not there already
+		// FIXME: Using strings.Contains may not be the best approach
+		if !strings.Contains(newTarget, "/run/host/") {
+			// Try to find the file inside of /run/host in the container where the
+			// available host's files are accessible.
+			newTarget = filepath.Join("/run/host", newTarget)
+		}
+		target = newTarget
+
+		targetInfo, err = os.Lstat(target)
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				return fmt.Errorf("target %s was not found in the container", target)
+			}
+			return fmt.Errorf("failed to lstat %s: %w", target, err)
+		}
+
+		isSymlink = (targetInfo.Mode() & os.ModeSymlink) != 0
+		if !isSymlink {
+			logrus.Debugf("Resolved and redirecting %s to %s", containerPath, newTarget)
+		}
+	}
+
+	err = os.Remove(containerPath)
 	if folder {
 		if err != nil {
-			return fmt.Errorf("failed to redirect %s to %s", containerPath, target)
+			return fmt.Errorf("failed to redirect %s to %s: %w", containerPath, target, err)
 		}
 
 		if err := os.MkdirAll(target, 0755); err != nil {
-			return fmt.Errorf("failed to redirect %s to %s", containerPath, target)
+			return fmt.Errorf("failed to redirect %s to %s: %w", containerPath, target, err)
 		}
 	}
 
 	if err := os.Symlink(target, containerPath); err != nil {
-		return fmt.Errorf("failed to redirect %s to %s", containerPath, target)
+		return fmt.Errorf("failed to redirect %s to %s: %w", containerPath, target, err)
 	}
 
 	return nil
