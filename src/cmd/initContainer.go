@@ -148,28 +148,22 @@ func initContainer(cmd *cobra.Command, args []string) error {
 		if utils.PathExists("/run/host/etc") {
 			logrus.Debug("Path /run/host/etc exists")
 
-			if _, err := os.Readlink("/etc/host.conf"); err != nil {
-				if err := redirectPath("/etc/host.conf",
-					"/run/host/etc/host.conf",
-					false); err != nil {
-					return err
-				}
+			if err := redirectPath("/etc/host.conf",
+				"/run/host/etc/host.conf",
+				false); err != nil {
+				return err
 			}
 
-			if _, err := os.Readlink("/etc/hosts"); err != nil {
-				if err := redirectPath("/etc/hosts",
-					"/run/host/etc/hosts",
-					false); err != nil {
-					return err
-				}
+			if err := redirectPath("/etc/hosts",
+				"/run/host/etc/hosts",
+				false); err != nil {
+				return err
 			}
 
-			if _, err := os.Readlink("/etc/resolv.conf"); err != nil {
-				if err := redirectPath("/etc/resolv.conf",
-					"/run/host/etc/resolv.conf",
-					false); err != nil {
-					return err
-				}
+			if err := redirectPath("/etc/resolv.conf",
+				"/run/host/etc/resolv.conf",
+				false); err != nil {
+				return err
 			}
 
 			for _, mount := range initContainerMounts {
@@ -188,37 +182,28 @@ func initContainer(cmd *cobra.Command, args []string) error {
 		if utils.PathExists("/run/host/monitor") {
 			logrus.Debug("Path /run/host/monitor exists")
 
-			if localtimeTarget, err := os.Readlink("/etc/localtime"); err != nil ||
-				localtimeTarget != "/run/host/monitor/localtime" {
-				if err := redirectPath("/etc/localtime",
-					"/run/host/monitor/localtime", false); err != nil {
-					return err
-				}
+			if err := redirectPath("/etc/localtime",
+				"/run/host/monitor/localtime", false); err != nil {
+				return err
 			}
 
-			if _, err := os.Readlink("/etc/timezone"); err != nil {
-				if err := redirectPath("/etc/timezone",
-					"/run/host/monitor/timezone",
-					false); err != nil {
-					return err
-				}
+			if err := redirectPath("/etc/timezone",
+				"/run/host/monitor/timezone",
+				false); err != nil {
+				return err
 			}
 		}
 	}
 
 	if initContainerFlags.mediaLink {
-		if _, err := os.Readlink("/media"); err != nil {
-			if err = redirectPath("/media", "/run/media", true); err != nil {
-				return err
-			}
+		if err = redirectPath("/media", "/run/media", true); err != nil {
+			return err
 		}
 	}
 
 	if initContainerFlags.mntLink {
-		if _, err := os.Readlink("/mnt"); err != nil {
-			if err := redirectPath("/mnt", "/var/mnt", true); err != nil {
-				return err
-			}
+		if err := redirectPath("/mnt", "/var/mnt", true); err != nil {
+			return err
 		}
 	}
 
