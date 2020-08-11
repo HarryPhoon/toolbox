@@ -173,6 +173,71 @@ func CreateErrorInvalidRelease(executableBase string) error {
 	return errors.New(errMsg)
 }
 
+// FollowSymlink follows the chain of symlinks in name
+//
+// name has to be an absolute path
+//
+// hostFile needs to be enabled if target leads to a file from the host system
+// and should be searched for there by prepending /run/host to the target
+// (enable only if FollowSymlink is ran in a toolbox container)
+//
+// On success the returned string is an absolute path to the final target and
+// error is nil. On error the returned string is blank.
+func FollowSymlink(target string, hostFile bool) (string, error) {
+	var origTarget string = target
+	var err error
+
+	logrus.Debugf("Following symlink %s", target)
+	targetInfo, err := os.Lstat(target)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return "", fmt.Errorf("target %s was not found: %w", target, err)
+		}
+		return "", fmt.Errorf("failed to lstat %s: %w", target, err)
+	}
+
+	isSymlink := (targetInfo.Mode() & os.ModeSymlink) != 0
+	// If the target is a link, follow the chain. If needed, repeat the process.
+	for isSymlink {
+		logrus.Debugf("Target %s is a symlink. Following.", target)
+
+		newTarget, err := os.Readlink(target)
+		if err != nil {
+			return "", fmt.Errorf("could not readlink %s: %w", target, err)
+		}
+		// Not all symlinks have absolute paths. This fact was made known to me in a
+		// GitHub issue: https://github.com/containers/toolbox/pull/460#discussion_r463984746
+		// including the solution
+		if !filepath.IsAbs(newTarget) {
+			newTarget = filepath.Join(filepath.Dir(target), newTarget)
+		}
+		// Only prepend /run/host to the filepath if it is not there already
+		// FIXME: Using strings.Contains may not be the best approach
+		if hostFile && !strings.Contains(newTarget, "/run/host/") {
+			// Try to find the file inside of /run/host in the container where the
+			// available host's files are accessible.
+			newTarget = filepath.Join("/run/host", newTarget)
+		}
+		// Symbolic links are a bit dangerous. Checking for cyclic symlinks is
+		// necessary
+		if newTarget == origTarget {
+			return "", fmt.Errorf("symlink %s is a cyclic symlink", origTarget)
+		}
+		target = newTarget
+
+		targetInfo, err := os.Lstat(target)
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				return "", fmt.Errorf("target %s was not found: %w", target, err)
+			}
+			return "", fmt.Errorf("failed to lstat %s: %w", target, err)
+		}
+		isSymlink = (targetInfo.Mode() & os.ModeSymlink) != 0
+	}
+
+	return target, nil
+}
+
 func ForwardToHost() (int, error) {
 	envOptions := GetEnvOptionsForPreservedVariables()
 	toolboxPath := os.Getenv("TOOLBOX_PATH")
