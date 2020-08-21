@@ -26,6 +26,7 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/containers/toolbox/pkg/podman"
 	"github.com/containers/toolbox/pkg/utils"
@@ -104,6 +105,11 @@ func preRun(cmd *cobra.Command, args []string) error {
 
 	if err := setUpLoggers(); err != nil {
 		return err
+	}
+
+	if utils.IsInsideContainer() && cmd.Name() == "init-container" {
+		currTime := time.Now()
+		logrus.Infof("Start container initialization %s", currTime.Format(time.RFC3339))
 	}
 
 	logrus.Debugf("Running as real user ID %s", currentUser.Uid)

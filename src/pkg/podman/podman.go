@@ -68,6 +68,17 @@ func ContainerExists(container string) (bool, error) {
 	return true, nil
 }
 
+// FollowLogs :)
+func FollowLogs(containerName string, stdout io.Writer, follow bool, tail int) error {
+	args := append([]string{"--follow", containerName})
+
+	if err := shell.Run("podman", nil, stdout, nil, args...); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // GetContainers is a wrapper function around `podman ps --format json` command.
 //
 // Parameter args accepts an array of strings to be passed to the wrapped command (eg. ["-a", "--filter", "123"]).
@@ -226,6 +237,11 @@ func IsToolboxImage(image string) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func Logs(containerName string) (string, error) {
+
+	return "", nil
 }
 
 // Pull pulls an image
