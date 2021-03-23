@@ -1,6 +1,6 @@
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
-github.com/HarryMichal/go-version v1.0.0 h1:fXYa5vT46C3pULfSIgnfeNfSxJ9bCGZ2ERn/wKPlD6c=
-github.com/HarryMichal/go-version v1.0.0/go.mod h1:w3uLQ2NlFmZ01qBywppIbDplbPEjeBW8xywlluMcMsc=
+github.com/HarryMichal/go-version v1.0.1 h1:Vgk1dPyHckkoUu0AED900+yO43+uwDuiNPsdpYe63KE=
+github.com/HarryMichal/go-version v1.0.1/go.mod h1:UNoJ+GvCcmwu0F9Mu1u5y56lP5rWksgkiwLlGx3r+Pk=
 github.com/acobaugh/osrelease v0.0.0-20181218015638-a93a0a55a249 h1:fMi9ZZ/it4orHj3xWrM6cLkVFcCbkXQALFUiNtHtCPs=
 github.com/acobaugh/osrelease v0.0.0-20181218015638-a93a0a55a249/go.mod h1:iU1PxQMQwoHZZWmMKrMkrNlY+3+p9vxIjpZOVyxWa0g=
 github.com/armon/consul-api v0.0.0-20180202201655-eb2c6b5be1b6/go.mod h1:grANhF5doyWs3UAsr3K4I6qtAmlQcZDesFNEHPZAzj8=

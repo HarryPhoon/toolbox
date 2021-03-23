@@ -3,7 +3,7 @@ module github.com/containers/toolbox
 go 1.13
 
 require (
-	github.com/HarryMichal/go-version v1.0.0
+	github.com/HarryMichal/go-version v1.0.1
 	github.com/acobaugh/osrelease v0.0.0-20181218015638-a93a0a55a249
 	github.com/briandowns/spinner v1.10.0
 	github.com/docker/go-units v0.4.0
