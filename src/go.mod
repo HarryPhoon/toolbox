@@ -11,8 +11,8 @@ require (
 	github.com/godbus/dbus/v5 v5.0.3
 	github.com/mattn/go-isatty v0.0.8
 	github.com/sirupsen/logrus v1.4.2
-	github.com/spf13/cobra v0.0.5
+	github.com/spf13/cobra v0.0.7
 	github.com/stretchr/testify v1.7.0
-	golang.org/x/crypto v0.0.0-20181203042331-505ab145d0a9
+	golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
 	golang.org/x/sys v0.0.0-20190422165155-953cdadca894
 )
