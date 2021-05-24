@@ -4,8 +4,8 @@ github.com/HarryMichal/go-version v1.0.0/go.mod h1:w3uLQ2NlFmZ01qBywppIbDplbPEje
 github.com/acobaugh/osrelease v0.0.0-20181218015638-a93a0a55a249 h1:fMi9ZZ/it4orHj3xWrM6cLkVFcCbkXQALFUiNtHtCPs=
 github.com/acobaugh/osrelease v0.0.0-20181218015638-a93a0a55a249/go.mod h1:iU1PxQMQwoHZZWmMKrMkrNlY+3+p9vxIjpZOVyxWa0g=
 github.com/armon/consul-api v0.0.0-20180202201655-eb2c6b5be1b6/go.mod h1:grANhF5doyWs3UAsr3K4I6qtAmlQcZDesFNEHPZAzj8=
-github.com/briandowns/spinner v1.10.0 h1:753NIJC2NHmPyVoPVWS+wh9eDx5umqe2U+JgX+KoTag=
-github.com/briandowns/spinner v1.10.0/go.mod h1:QOuQk7x+EaDASo80FEXwlwiA+j/PPIcX3FScO+3/ZPQ=
+github.com/briandowns/spinner v1.12.0 h1:72O0PzqGJb6G3KgrcIOtL/JAGGZ5ptOMCn9cUHmqsmw=
+github.com/briandowns/spinner v1.12.0/go.mod h1:QOuQk7x+EaDASo80FEXwlwiA+j/PPIcX3FScO+3/ZPQ=
 github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
 github.com/coreos/go-etcd v2.0.0+incompatible/go.mod h1:Jez6KQU2B/sWsbdaef3ED8NzMklzPG4d5KIOhIy30Tk=
 github.com/coreos/go-semver v0.2.0/go.mod h1:nnelYz7RCh+5ahJtPPxZlU+153eP4D4r3EedlOD2RNk=
