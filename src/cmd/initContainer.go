@@ -64,6 +64,15 @@ var (
 		{"/var/log/journal", "/run/host/var/log/journal", "ro"},
 		{"/var/mnt", "/run/host/var/mnt", "rslave"},
 	}
+
+	initContainerShMounts = []struct {
+		containerPath string
+		source        string
+		flags         string
+	}{
+		{"/etc/profile.d/toolbox.sh", "/run/host/etc/profile.d/toolbox.sh", "ro"},
+		{"/etc/profile.d/toolbox.sh", "/run/host/usr/share/profile.d/toolbox.sh", "ro"},
+	}
 )
 
 var initContainerCmd = &cobra.Command{
@@ -147,7 +156,7 @@ func initContainer(cmd *cobra.Command, args []string) error {
 
 	toolboxEnvFile, err := os.Create("/run/.toolboxenv")
 	if err != nil {
-		return errors.New("failed to create /run/.toolboxenv")
+		return fmt.Errorf("failed to create /run/.toolboxenv: %w", err)
 	}
 
 	defer toolboxEnvFile.Close()
@@ -155,74 +164,17 @@ func initContainer(cmd *cobra.Command, args []string) error {
 	if initContainerFlags.monitorHost {
 		logrus.Debug("Monitoring host")
 
-		if utils.PathExists("/run/host/etc") {
-			logrus.Debug("Path /run/host/etc exists")
-
-			if _, err := os.Readlink("/etc/host.conf"); err != nil {
-				if err := redirectPath("/etc/host.conf",
-					"/run/host/etc/host.conf",
-					false); err != nil {
-					return err
-				}
-			}
-
-			if _, err := os.Readlink("/etc/hosts"); err != nil {
-				if err := redirectPath("/etc/hosts",
-					"/run/host/etc/hosts",
-					false); err != nil {
-					return err
-				}
-			}
-
-			if localtimeTarget, err := os.Readlink("/etc/localtime"); err != nil ||
-				localtimeTarget != "/run/host/etc/localtime" {
-				if err := redirectPath("/etc/localtime",
-					"/run/host/etc/localtime",
-					false); err != nil {
-					return err
-				}
-			}
-
-			if err := updateTimeZoneFromLocalTime(); err != nil {
-				return err
-			}
-
-			if _, err := os.Readlink("/etc/resolv.conf"); err != nil {
-				if err := redirectPath("/etc/resolv.conf",
-					"/run/host/etc/resolv.conf",
-					false); err != nil {
-					return err
-				}
-			}
-
-			for _, mount := range initContainerMounts {
-				if err := mountBind(mount.containerPath, mount.source, mount.flags); err != nil {
-					return err
-				}
-			}
-
-			if utils.PathExists("/sys/fs/selinux") {
-				if err := mountBind("/sys/fs/selinux", "/usr/share/empty", ""); err != nil {
-					return err
-				}
-			}
+		if err = monitorHost(); err != nil {
+			return fmt.Errorf("failed to set up host monitoring: %w", err)
 		}
 	}
 
-	if initContainerFlags.mediaLink {
-		if _, err := os.Readlink("/media"); err != nil {
-			if err = redirectPath("/media", "/run/media", true); err != nil {
-				return err
-			}
-		}
+	if err = setUpFilesystem(); err != nil {
+		return fmt.Errorf("failed to set up filesystem: %w", err)
 	}
 
-	if initContainerFlags.mntLink {
-		if _, err := os.Readlink("/mnt"); err != nil {
-			if err := redirectPath("/mnt", "/var/mnt", true); err != nil {
-				return err
-			}
-		}
+	if err = setUpServices(); err != nil {
+		return fmt.Errorf("failed to set up services: %w", err)
 	}
 
 	if _, err := user.Lookup(initContainerFlags.user); err != nil {
@@ -245,25 +197,7 @@ func initContainer(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	if utils.PathExists("/etc/krb5.conf.d") && !utils.PathExists("/etc/krb5.conf.d/kcm_default_ccache") {
-		logrus.Debug("Setting KCM as the default Kerberos credential cache")
-
-		kcmConfigString := `# Written by Toolbox
-# https://github.com/containers/toolbox
-#
-# # To disable the KCM credential cache, comment out the following lines.
-
-[libdefaults]
-    default_ccache_name = KCM:
-`
-
-		kcmConfigBytes := []byte(kcmConfigString)
-		if err := ioutil.WriteFile("/etc/krb5.conf.d/kcm_default_ccache",
-			kcmConfigBytes,
-			0644); err != nil {
-			return errors.New("failed to set KCM as the defult Kerberos credential cache")
-		}
-	}
+	setUpExtras()
 
 	logrus.Debug("Setting up daily ticker")
 
@@ -446,6 +380,59 @@ func handleFileSystemEvent(event fsnotify.Event) {
 	}
 }
 
+// monitorHost sets up monitoring of crucial host files by watching their
+// counterparts mounted from host in /run/host
+//
+// Monitored files:
+//   - /etc/host.conf
+//   - /etc/hosts
+//   - /etc/localtime
+//   - /etc/resolv.conf
+func monitorHost() error {
+	if utils.PathExists("/run/host/etc") {
+		logrus.Debug("Path /run/host/etc exists")
+
+		if _, err := os.Readlink("/etc/host.conf"); err != nil {
+			if err := redirectPath("/etc/host.conf",
+				"/run/host/etc/host.conf",
+				false); err != nil {
+				return err
+			}
+		}
+
+		if _, err := os.Readlink("/etc/hosts"); err != nil {
+			if err := redirectPath("/etc/hosts",
+				"/run/host/etc/hosts",
+				false); err != nil {
+				return err
+			}
+		}
+
+		if localtimeTarget, err := os.Readlink("/etc/localtime"); err != nil ||
+			localtimeTarget != "/run/host/etc/localtime" {
+			if err := redirectPath("/etc/localtime",
+				"/run/host/etc/localtime",
+				false); err != nil {
+				return err
+			}
+		}
+
+		if err := updateTimeZoneFromLocalTime(); err != nil {
+			return err
+		}
+
+		if _, err := os.Readlink("/etc/resolv.conf"); err != nil {
+			if err := redirectPath("/etc/resolv.conf",
+				"/run/host/etc/resolv.conf",
+				false); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 func mountBind(containerPath, source, flags string) error {
 	fi, err := os.Stat(source)
 	if err != nil {
@@ -559,6 +546,144 @@ func runUpdateDb() {
 	if err := shell.Run("updatedb", nil, nil, nil); err != nil {
 		logrus.Warnf("Failed to run updatedb(8): %v", err)
 	}
+}
+
+// setUpExtras sets up non-essential parts of toolbox
+func setUpExtras() {
+	for _, mount := range initContainerShMounts {
+
+		if err := mountBind(mount.containerPath, mount.source, mount.flags); err != nil {
+			logrus.Warn(err)
+		}
+	}
+
+	if utils.PathExists("/etc/krb5.conf.d") && !utils.PathExists("/etc/krb5.conf.d/kcm_default_ccache") {
+		logrus.Debug("Setting KCM as the default Kerberos credential cache")
+
+		kcmConfigString := `# Written by Toolbox
+# https://github.com/containers/toolbox
+#
+# # To disable the KCM credential cache, comment out the following lines.
+
+[libdefaults]
+    default_ccache_name = KCM:
+`
+
+		kcmConfigBytes := []byte(kcmConfigString)
+		if err := ioutil.WriteFile("/etc/krb5.conf.d/kcm_default_ccache",
+			kcmConfigBytes,
+			0644); err != nil {
+			logrus.Warn("failed to set KCM as the defult Kerberos credential cache")
+		}
+	}
+}
+
+// setUpFilesystem sets up base filesystem of a toolbox
+//
+// The setup consists of creating symlinks and bind mounts to locations under
+// /run/host
+//
+// If an error is returned, consider it fatal for the setup
+func setUpFilesystem() error {
+	if initContainerFlags.mediaLink {
+		if _, err := os.Readlink("/media"); err != nil {
+			if err = redirectPath("/media", "/run/media", true); err != nil {
+				return err
+			}
+		}
+	}
+
+	if initContainerFlags.mntLink {
+		if _, err := os.Readlink("/mnt"); err != nil {
+			if err := redirectPath("/mnt", "/var/mnt", true); err != nil {
+				return err
+			}
+		}
+	}
+
+	for _, mount := range initContainerMounts {
+		if err := mountBind(mount.containerPath, mount.source, mount.flags); err != nil {
+			return err
+		}
+	}
+
+	if utils.PathExists("/sys/fs/selinux") {
+		if err := mountBind("/sys/fs/selinux", "/usr/share/empty", ""); err != nil {
+			return err
+		}
+	}
+
+	mounts := []struct {
+		sources []string
+		target  string
+	}{
+		{[]string{"/run/host/usr"}, "/usr"},
+		{[]string{"/run/host/boot"}, "/boot"},
+		{[]string{"/run/host/run/media", "/run/host/media"}, "/media"},
+		{[]string{"/run/host/var/mnt", "/run/host/mnt"}, "/mnt"},
+		{[]string{"/run/host/run/media"}, "/run/media"},
+		{[]string{"/run/host/home"}, "/home"},
+	}
+
+	for _, mount := range mounts {
+		for _, source := range mount.sources {
+			if utils.PathExists(source) {
+				mountBind(mount.target, source, "")
+			}
+		}
+	}
+
+	// logrus.Debug("Looking for toolbox.sh")
+
+	/*for _, mount := range createToolboxShMounts {
+		if utils.PathExists(mount.source) {
+			logrus.Debugf("Found %s", mount.source)
+
+			toolboxShMountArg := mount.source + ":" + mount.containerPath + ":ro"
+			toolboxShMount = []string{"--volume", toolboxShMountArg}
+			break
+		}
+	}*/
+
+	logrus.Debug("Checking if /home is a symbolic link to /var/home")
+
+	// var slashHomeLink []string
+
+	slashHomeEvaled, _ := filepath.EvalSymlinks("/home")
+	if slashHomeEvaled == "/var/home" {
+		logrus.Debug("/home is a symbolic link to /var/home")
+		// slashHomeLink = []string{"--home-link"}
+	}
+
+	return nil
+}
+
+// setUpServices sets up service sockets
+func setUpServices() error {
+	/*
+		var avahiSocketMount []string
+
+		avahiSocket, err := getServiceSocket("Avahi", "avahi-daemon.socket")
+		if err != nil {
+			logrus.Debug(err)
+		}
+		if avahiSocket != "" {
+			avahiSocketMountArg := avahiSocket + ":" + avahiSocket
+			avahiSocketMount = []string{"--volume", avahiSocketMountArg}
+		}
+
+		var kcmSocketMount []string
+
+		kcmSocket, err := getServiceSocket("KCM", "sssd-kcm.socket")
+		if err != nil {
+			logrus.Debug(err)
+		}
+		if kcmSocket != "" {
+			kcmSocketMountArg := kcmSocket + ":" + kcmSocket
+			kcmSocketMount = []string{"--volume", kcmSocketMountArg}
+		}
+	*/
+	return nil
 }
 
 func sanitizeRedirectionTarget(target string) string {

@@ -47,14 +47,6 @@ var (
 		image     string
 		release   string
 	}
-
-	createToolboxShMounts = []struct {
-		containerPath string
-		source        string
-	}{
-		{"/etc/profile.d/toolbox.sh", "/etc/profile.d/toolbox.sh"},
-		{"/etc/profile.d/toolbox.sh", "/usr/share/profile.d/toolbox.sh"},
-	}
 )
 
 var createCmd = &cobra.Command{
@@ -265,110 +257,6 @@ func createContainer(container, image, release string, showCommandToEnter bool) 
 	logrus.Debugf("%s canonicalized to %s", currentUser.HomeDir, homeDirEvaled)
 	homeDirMountArg := homeDirEvaled + ":" + homeDirEvaled + ":rslave"
 
-	bootMountFlags := "rw"
-	isBootReadWrite, err := isPathReadWrite("/boot")
-	if err != nil {
-		return err
-	}
-	if !isBootReadWrite {
-		bootMountFlags = "ro"
-	}
-
-	bootMountArg := "/boot:/run/host/boot:" + bootMountFlags + ",rslave"
-
-	usrMountFlags := "ro"
-	isUsrReadWrite, err := isPathReadWrite("/usr")
-	if err != nil {
-		return err
-	}
-	if isUsrReadWrite {
-		usrMountFlags = "rw"
-	}
-
-	usrMountArg := "/usr:/run/host/usr:" + usrMountFlags + ",rslave"
-
-	var avahiSocketMount []string
-
-	avahiSocket, err := getServiceSocket("Avahi", "avahi-daemon.socket")
-	if err != nil {
-		logrus.Debug(err)
-	}
-	if avahiSocket != "" {
-		avahiSocketMountArg := avahiSocket + ":" + avahiSocket
-		avahiSocketMount = []string{"--volume", avahiSocketMountArg}
-	}
-
-	var kcmSocketMount []string
-
-	kcmSocket, err := getServiceSocket("KCM", "sssd-kcm.socket")
-	if err != nil {
-		logrus.Debug(err)
-	}
-	if kcmSocket != "" {
-		kcmSocketMountArg := kcmSocket + ":" + kcmSocket
-		kcmSocketMount = []string{"--volume", kcmSocketMountArg}
-	}
-
-	var mediaLink []string
-	var mediaMount []string
-
-	if utils.PathExists("/media") {
-		logrus.Debug("Checking if /media is a symbolic link to /run/media")
-
-		mediaPath, _ := filepath.EvalSymlinks("/media")
-		if mediaPath == "/run/media" {
-			logrus.Debug("/media is a symbolic link to /run/media")
-			mediaLink = []string{"--media-link"}
-		} else {
-			mediaMount = []string{"--volume", "/media:/media:rslave"}
-		}
-	}
-
-	var mntLink []string
-	var mntMount []string
-
-	if utils.PathExists("/mnt") {
-		logrus.Debug("Checking if /mnt is a symbolic link to /var/mnt")
-
-		mntPath, _ := filepath.EvalSymlinks("/mnt")
-		if mntPath == "/var/mnt" {
-			logrus.Debug("/mnt is a symbolic link to /var/mnt")
-			mntLink = []string{"--mnt-link"}
-		} else {
-			mntMount = []string{"--volume", "/mnt:/mnt:rslave"}
-		}
-	}
-
-	var runMediaMount []string
-
-	if utils.PathExists("/run/media") {
-		runMediaMount = []string{"--volume", "/run/media:/run/media:rslave"}
-	}
-
-	logrus.Debug("Looking for toolbox.sh")
-
-	var toolboxShMount []string
-
-	for _, mount := range createToolboxShMounts {
-		if utils.PathExists(mount.source) {
-			logrus.Debugf("Found %s", mount.source)
-
-			toolboxShMountArg := mount.source + ":" + mount.containerPath + ":ro"
-			toolboxShMount = []string{"--volume", toolboxShMountArg}
-			break
-		}
-	}
-
-	logrus.Debug("Checking if /home is a symbolic link to /var/home")
-
-	var slashHomeLink []string
-
-	slashHomeEvaled, _ := filepath.EvalSymlinks("/home")
-	if slashHomeEvaled == "/var/home" {
-		logrus.Debug("/home is a symbolic link to /var/home")
-		slashHomeLink = []string{"--home-link"}
-	}
-
 	logLevelString := podman.LogLevel.String()
 
 	userShell := os.Getenv("SHELL")
@@ -386,10 +274,6 @@ func createContainer(container, image, release string, showCommandToEnter bool) 
 		"--user", currentUser.Username,
 		"--monitor-host",
 	}
-
-	entryPoint = append(entryPoint, slashHomeLink...)
-	entryPoint = append(entryPoint, mediaLink...)
-	entryPoint = append(entryPoint, mntLink...)
 
 	createArgs := []string{
 		"--log-level", logLevelString,
@@ -423,25 +307,12 @@ func createContainer(container, image, release string, showCommandToEnter bool) 
 	createArgs = append(createArgs, []string{
 		"--userns", usernsArg,
 		"--user", "root:root",
-		"--volume", bootMountArg,
-		"--volume", "/etc:/run/host/etc",
-		"--volume", "/dev:/dev:rslave",
-		"--volume", "/run:/run/host/run:rslave",
-		"--volume", "/tmp:/run/host/tmp:rslave",
-		"--volume", "/var:/run/host/var:rslave",
 		"--volume", dbusSystemSocketMountArg,
 		"--volume", homeDirMountArg,
+		"--volume", "/:/run/host:rslave",
 		"--volume", toolboxPathMountArg,
-		"--volume", usrMountArg,
 		"--volume", runtimeDirectoryMountArg,
 	}...)
-
-	createArgs = append(createArgs, avahiSocketMount...)
-	createArgs = append(createArgs, kcmSocketMount...)
-	createArgs = append(createArgs, mediaMount...)
-	createArgs = append(createArgs, mntMount...)
-	createArgs = append(createArgs, runMediaMount...)
-	createArgs = append(createArgs, toolboxShMount...)
 
 	createArgs = append(createArgs, []string{
 		imageFull,
