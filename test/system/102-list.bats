@@ -82,3 +82,43 @@ teardown() {
   assert_output --partial "non-default-one"
   assert_output --partial "non-default-two"
 }
+
+@test "list: List an image without a name" {
+    echo -e "FROM scratch\n\nLABEL com.github.containers.toolbox=\"true\"" > "$BATS_TEST_TMPDIR"/Containerfile
+
+    run $PODMAN build "$BATS_TEST_TMPDIR"
+
+    assert_success
+    assert_line --index 0 "STEP 1: FROM scratch"
+    assert_line --index 1 "STEP 2: LABEL com.github.containers.toolbox=\"true\""
+    assert_line --index 2 "STEP 3: COMMIT"
+    assert_line --index 3 --regexp "^--> [a-z0-9]*$"
+
+    run $TOOLBOX list
+
+    assert_success
+    assert_line --index 1 --partial "<none>"
+}
+
+@test "list: List a container without a name" {
+    echo -e "FROM scratch\n\nLABEL com.github.containers.toolbox=\"true\"" > "$BATS_TEST_TMPDIR"/Containerfile
+
+    run $PODMAN build "$BATS_TEST_TMPDIR" --tag "my-image"
+
+    assert_success
+    assert_line --index 0 "STEP 1: FROM scratch"
+    assert_line --index 1 "STEP 2: LABEL com.github.containers.toolbox=\"true\""
+    assert_line --index 2 "STEP 3: COMMIT my-image"
+    assert_line --index 3 --regexp "^--> [a-z0-9]*$"
+
+    run $PODMAN create localhost/my-image --name my-container
+
+    assert_success
+    assert_output --regexp "^[a-z0-9]*$"
+
+    run $TOOLBOX list
+
+    assert_success
+    assert_line --index 1 --partial "localhost/my-image"
+    assert_line --index 3 --partial "my-container"
+}
