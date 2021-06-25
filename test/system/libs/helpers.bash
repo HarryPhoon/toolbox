@@ -11,6 +11,12 @@ readonly SKOPEO=$(command -v skopeo)
 readonly PROJECT_DIR=${PWD}
 readonly IMAGE_CACHE_DIR="${PROJECT_DIR}/image-cache"
 
+readonly CREATE_TIMEOUT=3
+readonly ENTER_TIMEOUT=3
+
+# Internal variables
+readonly _CMD_OUTPUT="${BATS_TMPDIR}/toolbox-cmd-output"
+
 # Images
 declare -Ag IMAGES=([busybox]="docker.io/library/busybox" \
                    [fedora]="registry.fedoraproject.org/fedora-toolbox" \
@@ -228,6 +234,46 @@ function list_images() {
 
 function list_containers() {
   $PODMAN ps --all --quiet | wc -l
+}
+
+
+# Enters a toolbox using 'toolbox enter', executes provided command
+# and populates variables $status & $output with the outcome similarly
+# to command run in BATS
+#
+# Parameters:
+# ===========
+# - container_name - name of the container
+# - command - executed command
+function exec_in_toolbox_shell() {
+  local container_name
+  local timeout
+  container_name="$1"
+  timeout=3
+
+  shift
+
+  # Some command has to be provided
+  assert [ $# -gt 0 ]
+
+  (sleep $timeout; echo "($@); echo $?") | socat - exec:"$TOOLBOX enter $container_name",pty >"$_CMD_OUTPUT"
+
+  # The first line contains the command prompt and the last 2 the return code
+  # and new command prompt. Filter them out.
+  status=$(cat "$_CMD_OUTPUT" | tail -n 2 - | head -n 1 -)
+  output=$(cat "$_CMD_OUTPUT" | tail -n +2 - | head -n -2 -)
+
+  # Get rid of unwanted whitespace characters
+  status="${status//[$'\t\r\n ']}"
+  output="${output//[$'\t\r\n ']}"
+
+  rm -f $_CMD_OUTPUT
+}
+
+
+#
+function get_default_container_name() {
+  echo "$(get_system_id)-toolbox-$(get_system_version)"
 }
 
 
