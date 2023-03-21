@@ -173,7 +173,6 @@ func create(cmd *cobra.Command, args []string) error {
 		createFlags.distro,
 		createFlags.image,
 		createFlags.release)
-
 	if err != nil {
 		return err
 	}
@@ -703,7 +702,7 @@ func pullImage(image, release, authFile string) (bool, error) {
 	}
 
 	promptForDownload := true
-	var shouldPullImage bool
+	shouldPullImage := false
 
 	if rootFlags.assumeYes || domain == "localhost" {
 		promptForDownload = false
@@ -711,18 +710,43 @@ func pullImage(image, release, authFile string) (bool, error) {
 	}
 
 	if promptForDownload {
+		confirmationChan := make(chan bool)
+		imageSizeChan := make(chan string)
+		promptChan := make(chan prompt)
+
+		// Launch a goroutine to call getImageSizeFromRegistry and send the size to the channel
+		go func() {
+			imageSize, err := getImageSizeFromRegistry(imageFull)
+			if err != nil {
+				logrus.Debugf("Getting image size failed: %s", err)
+				imageSize = ""
+			}
+
+			imageSizeChan <- imageSize
+		}()
+
+		prompt := prompt{fmt.Sprintf("Download %s (", imageFull), ")?", nil}
+
 		fmt.Println("Image required to create toolbox container.")
+		go askForConfirmationAsync(prompt, promptChan, confirmationChan)
 
-		var prompt string
-
-		if imageSize, err := getImageSizeFromRegistry(imageFull); err != nil {
-			logrus.Debugf("Getting image size failed: %s", err)
-			prompt = fmt.Sprintf("Download %s? [y/N]:", imageFull)
-		} else {
-			prompt = fmt.Sprintf("Download %s (%s)? [y/N]:", imageFull, imageSize)
+		cancel := false
+		for !cancel {
+			select {
+			case imageSize := <-imageSizeChan:
+				if imageSize != "" {
+					prompt.prefix = fmt.Sprintf("\rDownload %s (%s)?", imageFull, imageSize)
+					prompt.suffix = ""
+				} else {
+					prompt.prefix = fmt.Sprintf("\rDownload %s?", imageFull)
+					prompt.suffix = ""
+				}
+				promptChan <- prompt
+			case shouldPullImage = <-confirmationChan:
+				cancel = true
+				break
+			}
 		}
-
-		shouldPullImage = askForConfirmation(prompt)
 	}
 
 	if !shouldPullImage {

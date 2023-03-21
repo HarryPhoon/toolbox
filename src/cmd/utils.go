@@ -24,9 +24,16 @@ import (
 	"os/exec"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/containers/toolbox/pkg/utils"
 )
+
+type prompt struct {
+	prefix         string
+	suffix         string
+	spinnerCharSet []string
+}
 
 // askForConfirmation prints prompt to stdout and waits for response from the
 // user
@@ -65,6 +72,69 @@ func askForConfirmation(prompt string) bool {
 	}
 
 	return retVal
+}
+
+// askForConfirmation prints prompt to stdout and waits for response from the
+// user
+//
+// Expected answers are: "yes", "y", "no", "n"
+//
+// Answers are internally converted to lower case.
+//
+// The default answer is "no" ([y/N])
+func askForConfirmationAsync(prompt prompt, promptChan chan prompt, confirmationChan chan bool) {
+	var s *spinner.Spinner
+	if prompt.spinnerCharSet != nil {
+		s = spinner.New(prompt.spinnerCharSet, 500*time.Millisecond)
+		s.Prefix = prompt.prefix
+		s.Suffix = fmt.Sprintf("%s [y/N]: ", prompt.suffix)
+		s.Writer = os.Stderr
+
+		s.Start()
+		defer s.Stop()
+	}
+
+	// Handle prompt updates
+	go func() {
+		for {
+			select {
+			case newPrompt := <-promptChan:
+				if prompt.spinnerCharSet != nil {
+					s.Lock()
+					s.Prefix = newPrompt.prefix
+					s.Suffix = fmt.Sprintf("%s [y/N]: ", newPrompt.suffix)
+					s.Unlock()
+				}
+			}
+		}
+	}()
+
+	for {
+		var response string
+
+		scanner := bufio.NewScanner(os.Stdin)
+		scanner.Split(bufio.ScanLines)
+
+		if scanner.Scan() {
+			response = scanner.Text()
+		}
+
+		if response == "" {
+			response = "n"
+		} else {
+			response = strings.ToLower(response)
+		}
+
+		if response == "no" || response == "n" {
+			confirmationChan <- false
+			break
+		} else if response == "yes" || response == "y" {
+			confirmationChan <- true
+			break
+		}
+	}
+
+	s.Stop()
 }
 
 func createErrorContainerNotFound(container string) error {
@@ -155,7 +225,6 @@ func resolveContainerAndImageNames(container, containerArg, distroCLI, imageCLI,
 		distroCLI,
 		imageCLI,
 		releaseCLI)
-
 	if err != nil {
 		var errContainer *utils.ContainerError
 		var errDistro *utils.DistroError
